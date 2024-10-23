@@ -1,0 +1,181 @@
+﻿@using QueueManagementSystem.MVC.Models
+@using Microsoft.EntityFrameworkCore
+@using QueueManagementSystem.MVC.Data
+@using QueueManagementSystem.MVC.Services
+@namespace QueueManagementSystem.MVC.Components
+@inject IConfigurationService ConfigService
+@inject ToastService ToastService
+
+<Toasts class="p-3" Messages="messages" AutoHide="true" StackLength="3" Placement="ToastsPlacement.TopRight" />
+
+<div class="card" style="padding:20px;background-color:#E6F2F2">
+    <div class="row">
+        <h4>System Configuration</h4>
+        <EditForm Model="@systemConfig" OnValidSubmit="OnValidFormSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-md-12">
+                    <!-- Queue To Room Setting -->
+                    <div class="mb-4 p-3 bg-white rounded shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label mb-0">Queue To Room With Available Users Only</label>
+                            <Switch Class="large-switch" @bind-Value="systemConfig.QueueToRoomWithAvailableUsersOnly" />
+                        </div>
+                    </div>
+
+                    <!-- Auto Remove Duration Setting -->
+                    <div class="mb-4 p-3 bg-white rounded shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label mb-0">Remove Patients After Duration</label>
+                            <InputSelect class="form-select w-25" @bind-Value="systemConfig.RemovePatientsDuration">
+                                <option value="">Select duration</option>
+                                <option value="12">12 hours</option>
+                                <option value="24">24 hours</option>
+                                <option value="48">48 hours</option>
+                                <option value="72">72 hours</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-white rounded shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label mb-0">Ticket Call Repetitions</label>
+                            <InputSelect class="form-select w-25" @bind-Value="systemConfig.TicketCallRepetitions">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <option value="@i">@i time@(i > 1 ? "s" : "")</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    @* <!-- Specific Time Setting -->
+                    <div class="mb-4 p-3 bg-white rounded shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label mb-0">Remove Patients at Specific Time</label>
+                            <input type="time" class="form-control w-25" @bind="RemovePatientsDateTime" />
+                        </div>
+                    </div> *@
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="row mt-4">
+                <div class="col-md-12 text-right">
+                    <Button Type="ButtonType.Submit" Size="ButtonSize.Small" Color="ButtonColor.Success" Class="float-end">
+                        Save Changes
+                    </Button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    .large-switch {
+        transform: scale(1.5);
+        margin-left: 6.5rem;
+    }
+
+    .form-label {
+        color: #333;
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    private SystemConfigurationModel systemConfig = new();
+    private List<ToastMessage> messages = new List<ToastMessage>();
+    private DateTime? RemovePatientsDateTime
+    {
+        get => systemConfig.RemovePatientsTime.HasValue
+            ? DateTime.Today.Add(systemConfig.RemovePatientsTime.Value)
+            : (DateTime?)null;
+        set
+        {
+            if (value.HasValue)
+            {
+                systemConfig.RemovePatientsTime = value.Value.TimeOfDay;
+            }
+            else
+            {
+                systemConfig.RemovePatientsTime = null;
+            }
+        }
+    }
+
+    private class SystemConfigurationModel
+    {
+        public bool QueueToRoomWithAvailableUsersOnly { get; set; }
+        public int? RemovePatientsDuration { get; set; }
+        public TimeSpan? RemovePatientsTime { get; set; }
+        public int TicketCallRepetitions { get; set; } = 2; // Default to 2 repetitions
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            systemConfig.QueueToRoomWithAvailableUsersOnly = await ConfigService
+                .GetBoolConfigurationAsync(ConfigurationService.QueueToRoomWithAvailableUsersOnly);
+
+            systemConfig.RemovePatientsDuration = await ConfigService
+                .GetIntConfigurationAsync(ConfigurationService.RemovePatientsDuration);
+
+            systemConfig.TicketCallRepetitions = await ConfigService
+            .GetIntConfigurationAsync(ConfigurationService.TicketCallRepetitions, 2); // Default to 2
+
+            var timeStr = await ConfigService
+                .GetStringConfigurationAsync(ConfigurationService.RemovePatientsTime);
+            if (TimeSpan.TryParse(timeStr, out var time))
+            {
+                systemConfig.RemovePatientsTime = time;
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}"));
+        }
+    }
+
+    private async Task OnValidFormSubmit()
+    {
+        try
+        {
+            await ConfigService.SaveConfigurationAsync(
+                ConfigurationService.QueueToRoomWithAvailableUsersOnly,
+                systemConfig.QueueToRoomWithAvailableUsersOnly);
+
+            await ConfigService.SaveConfigurationAsync(
+            ConfigurationService.TicketCallRepetitions,
+            systemConfig.TicketCallRepetitions);
+
+            if (systemConfig.RemovePatientsDuration.HasValue)
+            {
+                await ConfigService.SaveConfigurationAsync(
+                    ConfigurationService.RemovePatientsDuration,
+                    systemConfig.RemovePatientsDuration.Value);
+            }
+
+            if (systemConfig.RemovePatientsTime.HasValue)
+            {
+                await ConfigService.SaveConfigurationAsync(
+                    ConfigurationService.RemovePatientsTime,
+                    systemConfig.RemovePatientsTime.Value.ToString());
+            }
+
+            ToastService.Notify(new ToastMessage
+                {
+                    Type = ToastType.Success,
+                    Title = "SUCCESS",
+                    HelpText = $"{DateTime.Now}",
+                    Message = "System configuration updated successfully."
+                });
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}"));
+        }
+    }
+}

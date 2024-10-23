@@ -1,0 +1,29 @@
+@using System.Security.Claims
+@using QueueManagementSystem.MVC.Views.Shared.Components.Notice
+
+@if (!Context.User.Identity.IsAuthenticated)
+{
+    <ul class="navbar-nav flex-grow-1">
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="Account" asp-action="Login">Login</a>
+        </li>
+    </ul>
+}
+else
+{
+    var email = Context.User.FindFirst(c => c.Type == ClaimTypes.Email)?.Value;
+    <ul class="navbar-nav flex-grow-1">
+        @* <li class="nav-item">
+            @(await Html.RenderComponentAsync<MessageComponent>(RenderMode.ServerPrerendered))
+        </li> *@
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="Account" asp-action="ChangePassword">Change Password</a>
+        </li>
+        <li class="nav-item">
+            <span class="nav-link">@email</span>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="Account" asp-action="Logout">Logout</a>
+        </li>
+    </ul>
+}

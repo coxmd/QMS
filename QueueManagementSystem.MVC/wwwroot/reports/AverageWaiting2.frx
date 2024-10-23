@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp" UseFileCache="true" ReportInfo.Created="03/09/2023 10:19:50" ReportInfo.Modified="09/28/2024 15:03:07" ReportInfo.CreatorVersion="2024.1.2.0">
+  <ScriptText>using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Data;
+using FastReport;
+using FastReport.Data;
+using FastReport.Dialog;
+using FastReport.Barcode;
+using FastReport.Table;
+using FastReport.Utils;
+
+namespace FastReport
+{
+  public class ReportScript
+  {
+    private void ReportTitle1_BeforePrint(object sender, EventArgs e)
+    {
+      var now = DateTime.Now;
+      try
+      {
+        TimeZoneInfo zoneInfo = TimeZoneInfo.FindSystemTimeZoneById(Report.GetParameterValue(&quot;Tz&quot;).ToString());
+                                                                                                 
+        now = TimeZoneInfo.ConvertTimeFromUtc(now.ToUniversalTime(), zoneInfo);
+      }
+      catch (Exception)
+      {                   
+      }
+      
+      txtPrintedOn.Text = now.ToString(&quot;dd-MMM-yyyy hh:mm tt&quot;);
+    }
+  }
+}
+</ScriptText>
+  <Styles>
+    <Style Name="EvenRows" Font="Arial, 10pt"/>
+  </Styles>
+  <Dictionary>
+    <PostgresDataConnection Name="Connection" ConnectionString="rijcmlqwOD/bEsQFbrXT9H9u0hdYcsAxnorcvsd0DOMXmQRVk1Elr+Ob90VuGMozAgUeOsdnU1cm07i7BED1iN532HWz9a/wPPmfaMR3hfgAX3Zr9t4UQwuoY7UJXG9uNt6TE3We4+2s6IfyQNrrK3PACoR7iBn1w4H0L7KOQAenKyld/SvRFSnuw7nLU40g5QwQ5pPwZ1TbPcEv0gDCi2wVAr6DIJXa6wnW6bmgolN1Tn0wm8=">
+      <TableDataSource Name="Table" Alias="Test" DataType="System.Int32" Enabled="true" SelectCommand="Select&#13;&#10;    &quot;ServicePoint&quot;.&quot;Name&quot;&#13;&#10;From&#13;&#10;    &quot;ServicePoint&quot;">
+        <Column Name="Name" DataType="System.String"/>
+      </TableDataSource>
+    </PostgresDataConnection>
+    <Parameter Name="Tz" DataType="System.String" AsString=""/>
+    <Parameter Name="DateFrom" DataType="System.String" AsString=""/>
+    <Parameter Name="DateTo" DataType="System.String" AsString=""/>
+  </Dictionary>
+  <ReportPage Name="Page1" Landscape="true" PaperWidth="297" PaperHeight="210" Watermark.Font="Arial, 60pt">
+    <ReportTitleBand Name="ReportTitle1" Width="1047.06" Height="75.6">
+      <TextObject Name="Text1" Left="9.45" Top="9.45" Width="1039.5" Height="28.35" Fill.Color="LightSkyBlue" Text="Average Waiting and Service Time" HorzAlign="Center" VertAlign="Center" Font="Arial, 11pt, style=Bold"/>
+      <TextObject Name="Text33" Left="699.3" Top="56.7" Width="94.5" Height="18.9" Text="Printed On:" HorzAlign="Right" Font="Arial, 10pt, style=Bold"/>
+      <TextObject Name="txtPrintedOn" Left="793.8" Top="56.7" Width="236.25" Height="18.9" Font="Arial, 10pt, style=Bold"/>
+    </ReportTitleBand>
+    <PageHeaderBand Name="PageHeader1" Top="78.27" Width="1047.06" Height="18.9">
+      <TextObject Name="Text11" Left="9.45" Width="207.9" Height="18.9" Text="Service Provider" Font="Times New Roman, 12pt, style=Bold"/>
+      <TextObject Name="Text12" Left="255.15" Width="255.15" Height="18.9" Text="Average Waiting Time" HorzAlign="Right" Font="Times New Roman, 12pt, style=Bold"/>
+      <TextObject Name="Text34" Left="529.2" Width="255.15" Height="18.9" Text="Average Service Time" HorzAlign="Right" Font="Times New Roman, 12pt, style=Bold"/>
+    </PageHeaderBand>
+    <DataBand Name="Data1" Top="99.83" Width="1047.06" Height="37.8" DataSource="Table">
+      <TextObject Name="Text35" Left="9.45" Top="9.45" Width="207.9" Height="18.9" Text="[Test.Name]" Font="Arial, 10pt"/>
+      <TextObject Name="Text36" Left="349.65" Top="18.9" Width="160.65" Height="18.9" Text="[Test.Name]" Font="Arial, 10pt"/>
+    </DataBand>
+    <PageFooterBand Name="PageFooter1" Top="140.3" Width="1047.06" Height="28.35">
+      <TextObject Name="Text9" Left="614.25" Top="9.45" Width="94.5" Height="18.9" Text="[Page]" Font="Arial, 10pt"/>
+    </PageFooterBand>
+  </ReportPage>
+</Report>

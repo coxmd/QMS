@@ -1,0 +1,111 @@
+﻿@using QueueManagementSystem.MVC.Models.SmsConfig
+@using Microsoft.EntityFrameworkCore
+@using QueueManagementSystem.MVC.Data
+@using QueueManagementSystem.MVC.Services
+@namespace QueueManagementSystem.MVC.Components
+@inject IDbContextFactory<QueueManagementSystemContext> DbFactory
+@inject ToastService ToastService
+@inject ISmsService SmsService
+
+<Toasts class="p-3" Messages="messages" AutoHide="true" StackLength="3" Placement="ToastsPlacement.TopRight" />
+
+<div class="card" style="padding:20px;background-color:#E6F2F2;">
+    <div class="row">
+        <h4>SMS Configuration</h4>
+        <EditForm Model="@smsSettings" OnValidSubmit="OnValidFormSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">API URL <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="smsSettings.Url" />
+                        <ValidationMessage For="@(() => smsSettings.Url)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Token <span class="text-danger">*</span></label>
+                        <InputText type="password" class="form-control" @bind-Value="smsSettings.Token" />
+                        <ValidationMessage For="@(() => smsSettings.Token)" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Sender ID <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="smsSettings.SenderId" />
+                        <ValidationMessage For="@(() => smsSettings.SenderId)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 text-right">
+                    <Button Type="ButtonType.Submit" Size="ButtonSize.Small" Color="ButtonColor.Success" Class="float-end me-2">
+                        Save Settings
+                    </Button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private SmsSettingsModel smsSettings = new SmsSettingsModel();
+    private List<ToastMessage> messages = new List<ToastMessage>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSmsSettings();
+    }
+
+    private async Task LoadSmsSettings()
+    {
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var settings = await context.SmsSettings.FirstOrDefaultAsync();
+            if (settings != null)
+            {
+                smsSettings = settings;
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error loading settings: {ex.Message}"));
+        }
+    }
+
+    private async Task OnValidFormSubmit()
+    {
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var existingSettings = await context.SmsSettings.FirstOrDefaultAsync();
+
+            if (existingSettings == null)
+            {
+                context.SmsSettings.Add(smsSettings);
+            }
+            else
+            {
+                existingSettings.Url = smsSettings.Url;
+                existingSettings.Token = smsSettings.Token;
+                existingSettings.SenderId = smsSettings.SenderId;
+                context.SmsSettings.Update(existingSettings);
+            }
+
+            await context.SaveChangesAsync();
+
+            ToastService.Notify(new ToastMessage
+                {
+                    Type = ToastType.Success,
+                    Title = "SUCCESS",
+                    HelpText = $"{DateTime.Now}",
+                    Message = "SMS settings saved successfully."
+                });
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error saving settings: {ex.Message}"));
+        }
+    }
+}

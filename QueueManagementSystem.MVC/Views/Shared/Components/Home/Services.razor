@@ -1,0 +1,241 @@
+@using Microsoft.EntityFrameworkCore
+@using QueueManagementSystem.MVC.Data
+@using QueueManagementSystem.MVC.Models
+@using QueueManagementSystem.MVC.Models.Smtp
+@using QueueManagementSystem.MVC.Services
+@using FastReport
+@using FastReport.Export.PdfSimple;
+@using FastReport.Export.Pdf;
+@implements IAsyncDisposable
+
+@namespace QueueManagementSystem.MVC.Components
+
+@inject IDbContextFactory<QueueManagementSystemContext> DbFactory
+@inject ITicketService TicketService
+@inject IEmailSenderService EmailSenderService
+@inject IReportService ReportService
+@inject ISmsService smsService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject ILogger<Services> Logger
+
+@if (offeredServices == null)
+{
+    <h4 class="display-4">Services Loading...</h4>
+}
+else
+{
+    <div class="row">
+        @foreach (var service in offeredServices)
+        {
+            <div class="col-sm-4">
+                <div class="clickable-card mb-4" @onclick="() => OpenCustomerInfoModal(service.Name)">
+                    <Card Color="CardColor.Light" TextAlignment="Alignment.Center" Style="min-height:140px;">
+                        <CardBody>
+                            <CardTitle>@service.Name</CardTitle>
+                            <CardText>@service.Description</CardText>
+                        </CardBody>
+                    </Card>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<Modal @ref="customerInfoModal" Title="Customer Information" UseStaticBackdrop="true" CloseOnEscape="false">
+    <BodyTemplate>
+        <div class="row">
+            <div class="col-md-12">
+                <EditForm Model="@customerInfo" autocomplete="off" OnValidSubmit="HandleServiceSelection">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="mb-3">
+                        <label for="customerIdNumber" class="form-label">National ID Number</label>
+                        <InputText id="customerIdNumber" class="form-control" @bind-Value="customerInfo.Idnumber" placeholder="Enter your id number" />
+                        <ValidationMessage For="@(() => customerInfo.Idnumber)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="customerName" class="form-label">Name</label>
+                        <InputText id="customerName" class="form-control" @bind-Value="customerInfo.Name" placeholder="Enter your name" />
+                        <ValidationMessage For="@(() => customerInfo.Name)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="customerPhoneNumber" class="form-label">Phone Number</label>
+                        <InputText id="customerPhoneNumber" class="form-control" @bind-Value="customerInfo.PhoneNumber" placeholder="Enter your phone number" />
+                        <ValidationMessage For="@(() => customerInfo.PhoneNumber)" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 text-right">
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Danger" Class="float-end" @onclick="CloseCustomerInfoModal">Cancel</Button>
+                            <Button Type="ButtonType.Submit" Color="ButtonColor.Primary" Class="float-end me-2" Disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Loading...</span>
+                                }
+                                else
+                                {
+                                    <span>Submit</span>
+                                }
+                            </Button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </BodyTemplate>
+</Modal>
+
+<style>
+    .clickable-card {
+        cursor: pointer;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        transition: transform 0.3s ease;
+    }
+
+        .clickable-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transform: scale(1.04);
+        }
+
+    .card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .row {
+        overflow: hidden;
+    }
+
+    .qr-code {
+        z-index: 10;
+        margin-top: 2px;
+    }
+</style>
+
+@code {
+    private bool isMobileVersion => NavigationManager.Uri.Contains("/services-mobile");
+    private List<Service> offeredServices;
+    private Ticket currentTicket;
+    private Modal customerInfoModal;
+    private Modal ticketInfoModal;
+    private string selectedServiceName;
+    private CustomerInfo customerInfo = new CustomerInfo();
+    private bool isProcessing = false;
+
+    private async Task GenerateTicketAsync()
+    {
+        currentTicket = await TicketService.GenerateTicketAsync(selectedServiceName, customerInfo.Name, customerInfo.PhoneNumber, customerInfo.Idnumber);
+
+        using var context = DbFactory.CreateDbContext();
+        var servicePoint = await context.ServicePoints.FirstOrDefaultAsync(t => t.Id == currentTicket.ServicePointId);
+
+        if (isMobileVersion)
+        {
+            NavigationManager.NavigateTo($"Queue/TicketTrackingPage/{currentTicket.TicketNumber}", true);
+        }
+        else
+        {
+            isProcessing = false;
+            await CloseCustomerInfoModal();
+            customerInfo = new CustomerInfo();
+            var base64Pdf = await GenerateTicketPdfBase64(currentTicket);
+            await JS.InvokeVoidAsync("printTicket", base64Pdf);
+        }
+    }
+
+    private async Task<string> GenerateTicketPdfBase64(Ticket ticket)
+    {
+        Report report = ReportService.GenerateTicketReport(ticket);
+        using (MemoryStream strm = new MemoryStream())
+        {
+            PDFExport pdfExport = new PDFExport();
+            pdfExport.Export(report, strm);
+            return Convert.ToBase64String(strm.ToArray());
+        }
+    }
+
+    private async Task OpenCustomerInfoModal(string serviceName)
+    {
+        selectedServiceName = serviceName;
+        await customerInfoModal.ShowAsync();
+    }
+
+    private async Task CloseCustomerInfoModal()
+    {
+        await customerInfoModal.HideAsync();
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        customerInfo = new CustomerInfo();
+        isProcessing = false;
+    }
+
+    private async Task HandleServiceSelection()
+    {
+        if (string.IsNullOrWhiteSpace(customerInfo.Idnumber) || string.IsNullOrWhiteSpace(customerInfo.PhoneNumber))
+        {
+            await JS.InvokeVoidAsync("alert", "Please enter your details.");
+            return;
+        }
+
+        isProcessing = true;
+        await GenerateTicketAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        offeredServices = await context.Services.ToListAsync();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Implement if needed
+    }
+}
+
+<script>
+    window.printTicket = function (base64pdf) {
+        return new Promise((resolve) => {
+            var blob = b64toBlob(base64pdf, 'application/pdf');
+            var blobUrl = URL.createObjectURL(blob);
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = blobUrl;
+            document.body.appendChild(iframe);
+
+            iframe.onload = function () {
+                setTimeout(function () {
+                    iframe.contentWindow.print();
+                    iframe.onafterprint = function () {
+                        document.body.removeChild(iframe);
+                        URL.revokeObjectURL(blobUrl);
+                        resolve();
+                    };
+                }, 1000);
+            };
+        });
+    };
+
+    function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
+        const byteCharacters = atob(b64Data);
+        const byteArrays = [];
+
+        for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            const slice = byteCharacters.slice(offset, offset + sliceSize);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+        }
+
+        const blob = new Blob(byteArrays, { type: contentType });
+        return blob;
+    }
+</script>
