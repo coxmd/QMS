@@ -2,11 +2,9 @@
 @{
     ViewData["Title"] = "Waiting Page";
 }
-
 @{
     Layout = "_LayoutNoNav";
 }
-
 <div>
-    @(await Html.RenderComponentAsync<CalledTickets>(RenderMode.ServerPrerendered))
-</div> 
+    @(await Html.RenderComponentAsync<CalledTickets>(RenderMode.Server))
+</div>

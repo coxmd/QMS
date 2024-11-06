@@ -1,8 +1,6 @@
 using QueueManagementSystem.MVC.Models;
 using Microsoft.EntityFrameworkCore;
 
-
-using ServiceProvider = QueueManagementSystem.MVC.Models.ServiceProvider;
 using QueueManagementSystem.MVC.Services;
 
 namespace QueueManagementSystem.MVC.Data
@@ -66,22 +64,22 @@ namespace QueueManagementSystem.MVC.Data
             }
         }
 
-        public static void SeedServiceProviders(QueueManagementSystemContext context)
-        {
-            if (!context.ServiceProviders.Any())
-            {
-                var serviceProviders = new List<ServiceProvider>
-                {
-                    new ServiceProvider {Id = 1, FullNames = "Daniel Mwambogha", Email = "dante@gmail.com", IsAdmin = true, Password = BCrypt.Net.BCrypt.HashPassword("Dante@09"), ServicePointId = 4},
-                    new ServiceProvider {Id = 2, FullNames = "Chris Omar", Email = "chris@gmail.com", IsAdmin = false, Password = BCrypt.Net.BCrypt.HashPassword("Chris@09"), ServicePointId = 2},
-                    new ServiceProvider {Id = 3, FullNames = "Amina Mohammed", Email = "amina@yahoo.com", IsAdmin = false, Password = BCrypt.Net.BCrypt.HashPassword("Amina@09"), ServicePointId = 3},
-                };
+        //public static void SeedServiceProviders(QueueManagementSystemContext context)
+        //{
+        //    if (!context.ServiceProviders.Any())
+        //    {
+        //        var serviceProviders = new List<ServiceProvider>
+        //        {
+        //            new ServiceProvider {Id = 1, FullNames = "Daniel Mwambogha", Email = "dante@gmail.com", IsAdmin = true, Password = BCrypt.Net.BCrypt.HashPassword("Dante@09"), ServicePointId = 4},
+        //            new ServiceProvider {Id = 2, FullNames = "Chris Omar", Email = "chris@gmail.com", IsAdmin = false, Password = BCrypt.Net.BCrypt.HashPassword("Chris@09"), ServicePointId = 2},
+        //            new ServiceProvider {Id = 3, FullNames = "Amina Mohammed", Email = "amina@yahoo.com", IsAdmin = false, Password = BCrypt.Net.BCrypt.HashPassword("Amina@09"), ServicePointId = 3},
+        //        };
 
-                context.AddRange(serviceProviders);
-                context.SaveChanges();
+        //        context.AddRange(serviceProviders);
+        //        context.SaveChanges();
 
-            }
-        }
+        //    }
+        //}
 
         public static void ResetQueue(QueueManagementSystemContext context)
         {

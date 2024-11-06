@@ -18,8 +18,8 @@ namespace QueueManagementSystem.MVC.Services
             var serviceStats =  await _context.ServedTickets.GroupBy(st => st.ServiceName)
                                 .Select(g => new ServiceStat{
                                     Name = g.Key,
-                                    AverageWaitingTime = TimeSpan.FromSeconds(g.Average(st => (st.ShowTime-st.PrintTime).TotalSeconds)),
-                                    AverageServiceTime = TimeSpan.FromSeconds(g.Average(st => (st.FinishTime-st.ShowTime).TotalSeconds)),
+                                    AverageWaitingTime = TimeSpan.FromSeconds(g.Average(st => (st.ShowUpTime-st.ServicePointAssignmentTime).TotalSeconds)),
+                                    AverageServiceTime = TimeSpan.FromSeconds(g.Average(st => (st.FinishTime-st.ShowUpTime).TotalSeconds)),
                                     TotalOfferings = g.Count()
                                 }).ToListAsync();
 
@@ -31,8 +31,8 @@ namespace QueueManagementSystem.MVC.Services
             var serviceStats =  await _context.ServedTickets.Where(st => st.PrintTime.Date == date.Date).GroupBy(st => st.ServiceName)
                                 .Select(g => new ServiceStat{
                                     Name = g.Key,
-                                    AverageWaitingTime = TimeSpan.FromSeconds(g.Average(st => (st.ShowTime-st.PrintTime).TotalSeconds)),
-                                    AverageServiceTime = TimeSpan.FromSeconds(g.Average(st => (st.FinishTime-st.ShowTime).TotalSeconds)),
+                                    AverageWaitingTime = TimeSpan.FromSeconds(g.Average(st => (st.ShowUpTime -st.ServicePointAssignmentTime).TotalSeconds)),
+                                    AverageServiceTime = TimeSpan.FromSeconds(g.Average(st => (st.FinishTime-st.ShowUpTime).TotalSeconds)),
                                     TotalOfferings = g.Count()
                                 }).ToListAsync();
 
@@ -44,8 +44,8 @@ namespace QueueManagementSystem.MVC.Services
             var serviceStats =  await _context.ServedTickets.Where(st => startDate.Date <= st.PrintTime.Date && st.PrintTime.Date <= endDate.Date).GroupBy(st => st.ServiceName)
                                 .Select(g => new ServiceStat{
                                     Name = g.Key,
-                                    AverageWaitingTime = TimeSpan.FromSeconds(g.Average(st => (st.ShowTime-st.PrintTime).TotalSeconds)),
-                                    AverageServiceTime = TimeSpan.FromSeconds(g.Average(st => (st.FinishTime-st.ShowTime).TotalSeconds)),
+                                    AverageWaitingTime = TimeSpan.FromSeconds(g.Average(st => (st.ShowUpTime -st.ServicePointAssignmentTime).TotalSeconds)),
+                                    AverageServiceTime = TimeSpan.FromSeconds(g.Average(st => (st.FinishTime-st.ShowUpTime).TotalSeconds)),
                                     TotalOfferings = g.Count()
                                 }).ToListAsync();
 

@@ -10,6 +10,7 @@ using QueueManagementSystem.MVC.Data;
 using Microsoft.EntityFrameworkCore;
 using QueueManagementSystem.MVC.Models;
 using FastReport.AdvMatrix;
+using static QueueManagementSystem.MVC.Components.TicketTrackingPage;
 
 namespace QueueManagementSystem.MVC.Services
 {
@@ -20,6 +21,7 @@ namespace QueueManagementSystem.MVC.Services
         private IntPtr mDBHandle = IntPtr.Zero;
         private byte[] FPBuffer;
         private int RegisterCount = 0;
+        private int ComparisonData = 0;
         private const int REGISTER_FINGER_COUNT = 3;
         private byte[][] RegTmps = new byte[3][];
         private byte[] RegTmp = new byte[2048];
@@ -46,20 +48,20 @@ namespace QueueManagementSystem.MVC.Services
                 {
                     _logger.LogInformation("ZKFinger SDK initialized successfully");
                     // Device count
-                    int count = zkfp2.GetDeviceCount();
-                    _logger.LogInformation($"Number of connected devices: {count}");
-                    if (count == 0)
-                    {
-                        _logger.LogError("No fingerprint devices found");
-                        return false;
-                    }
+                    //int count = zkfp2.GetDeviceCount();
+                    //_logger.LogInformation($"Number of connected devices: {count}");
+                    //if (count == 0)
+                    //{
+                    //    _logger.LogError("No fingerprint devices found");
+                    //    return false;
+                    //}
 
-                    mDevHandle = zkfp2.OpenDevice(count - 1);
-                    if (mDevHandle == IntPtr.Zero)
-                    {
-                        _logger.LogError("OpenDevice failed");
-                        return false;
-                    }
+                    //mDevHandle = zkfp2.OpenDevice(count - 1);
+                    //if (mDevHandle == IntPtr.Zero)
+                    //{
+                    //    _logger.LogError("OpenDevice failed");
+                    //    return false;
+                    //}
 
                     mDBHandle = zkfp2.DBInit();
                     if (mDBHandle == IntPtr.Zero)
@@ -207,7 +209,7 @@ namespace QueueManagementSystem.MVC.Services
                 }
             }).ConfigureAwait(false);
         }
-        public async Task<FingerprintResult> SearchIdnoAsync(CustomerInfo customer)
+        public async Task<FingerprintResult> SearchIdnoAsync(Models.CustomerInfo customer)
         {
             return await Task.Run(() =>
             {
@@ -393,7 +395,7 @@ namespace QueueManagementSystem.MVC.Services
             _logger.LogInformation("Fingerprint service disposed");
         }
 
-        public async Task<FingerprintResult> ContinuousScanAsync(CustomerInfo customer)
+        public async Task<FingerprintResult> ContinuousScanAsync(Models.CustomerInfo customer)
         {
             return await Task.Run(() =>
             {
@@ -452,6 +454,58 @@ namespace QueueManagementSystem.MVC.Services
             });
         }
 
+        public async Task<FingerprintResult> MatchFingerPrintAsync(Models.CustomerInfo customer)
+        {
+            return await Task.Run(() =>
+            {
+
+                using var context = _dbFactory.CreateDbContext();
+                // Fetch the list of fingerprints from the database
+                var fingerprints = context.Biodata.Where(b => b.FingerPrintData != null).ToList();
+                var fingerPrintCount = fingerprints.Count();
+                Biometrics bio = new Biometrics();
+
+
+                foreach (var fingerprint in fingerprints)
+                {
+                    // Check for a matching customer info based on fingerprint data
+                    int ret = zkfp2.DBMatch(mDBHandle, customer.FingerPrintData, fingerprint.FingerPrintData);
+                    _logger.LogInformation($"score={ret}!");
+                    if (ret > 0)
+                    {
+                        _logger.LogInformation($"Fingerprint match succeeded, score={ret}!");
+                        return new FingerprintResult
+                        {
+                            IsAuthenticated = true,
+                            CustomerIdno = fingerprint.IdNumber!,
+                            Message = $"Fingerprint match succeeded, score={ret}!"
+                        };
+                    }
+                    ComparisonData = ret;
+
+
+
+                }
+
+                if (ComparisonData < 1)
+                {
+                    bio.FingerPrintData = customer.FingerPrintData;
+                    bio.IdNumber = "0";
+                    context.Biodata.Add(bio);
+                    context.SaveChangesAsync();
+                }
+                
+               
+
+                return new FingerprintResult
+                {
+                    IsAuthenticated = false,
+                    
+                    Message = $"No Registered Fingerprint data"
+                };
+
+            });
+        }
 
     }
 
@@ -461,8 +515,10 @@ namespace QueueManagementSystem.MVC.Services
         public string Message { get; set; }
         public bool IsSuccess { get; set; }
         public string CustomerName { get; set; }
+        public string CustomerIdno { get; set; }
         public string CustomerPhoneNumber { get; set; }
         public string CustomerEmail { get; set; }
+        public int FingerPrintCount { get; set; }
         public byte[]? FingerPrintData { get; set; }
     }
 }

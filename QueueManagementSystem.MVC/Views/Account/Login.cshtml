@@ -3,6 +3,9 @@
 @{
     ViewData["Title"] = "Log In";
 }
+@{
+    Layout = "_LayoutNoNav";
+}
 
 <style>
     .panel-header {
@@ -14,13 +17,18 @@
     }
 
     .login-panel {
-        background-color: #cae9f6;
+        background-color: lightgray;
         border-radius: 15px;
         padding: 20px;
         min-height: 400px;
         
+        
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         color: #1a3a5a;
+    }
+
+    .login-container {
+        margin-top: 40px;
     }
 
     .form-group label {
@@ -52,7 +60,7 @@
         color: #1a3a5a;
     }
 </style>
-<div class="container">
+<div class="login-container">
     <div class="row justify-content-center">
         <div class="login-panel col-12 col-sm-6 col-md-4">
             <div class="panel">
@@ -62,12 +70,12 @@
                     
                 </div>
                 <div class="panel-body">
-                    <form asp-action="Login" method="post" role="form" autocomplete="off"  asp-route-returnurl="@Context.Request.Query["ReturnUrl"]">
+                    <form asp-action="Login" method="post" role="form" autocomplete="off">
                         <div asp-validation-summary="All" class="text-danger"></div>
                         <div class="mb-3">
                         <div class="form-group">
-                            <label asp-for="Email">Email</label>
-                            <input asp-for="Email" class="form-control">
+                                <label asp-for="UserName">Username</label>
+                                <input asp-for="UserName" class="form-control">
                         </div>
                         </div>
                         <div class="mb-3">

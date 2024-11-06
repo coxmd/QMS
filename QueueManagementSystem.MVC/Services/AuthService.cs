@@ -2,6 +2,7 @@ using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using QueueManagementSystem.MVC.Data;
 using QueueManagementSystem.MVC.Models;
+using QueueManagementSystem.MVC.Models.Users;
 
 namespace QueueManagementSystem.MVC.Services
 {
@@ -14,9 +15,9 @@ namespace QueueManagementSystem.MVC.Services
             _context = context;
         }
 
-        public async Task<Models.ServiceProvider?> Authenticate(LoginModel user)
+        public async Task<SystemUsersModel?> Authenticate(LoginModel user)
         {
-            Models.ServiceProvider? provider = await _context.ServiceProviders.SingleOrDefaultAsync(sp => sp.Email == user.Email);
+            SystemUsersModel? provider = await _context.SystemUsers.SingleOrDefaultAsync(sp => sp.Username == user.UserName);
 
             if (provider == null || !BCrypt.Net.BCrypt.Verify(user.Password, provider.Password))
             {

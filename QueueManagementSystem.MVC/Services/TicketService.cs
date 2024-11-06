@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using QueueManagementSystem.MVC.Data;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Claims;
+using QueueManagementSystem.MVC.Models.Configurations;
 
 namespace QueueManagementSystem.MVC.Services;
 
@@ -12,6 +14,7 @@ public static class TicketStatus
     public const string Called = "Called";
     public const string InService = "In-Service";
     public const string NoShow = "No-Show";
+    public const string OnHold = "On-Hold";
 }
 
 public class TicketService : ITicketService
@@ -21,12 +24,14 @@ public class TicketService : ITicketService
     private static readonly List<Ticket> NoShowTickets = new();
     private readonly IConfiguration _configuration;
     private readonly ILogger<TicketService> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public TicketService(IDbContextFactory<QueueManagementSystemContext> dbFactory, IConfiguration configuration, ILogger<TicketService> logger)
+    public TicketService(IDbContextFactory<QueueManagementSystemContext> dbFactory, IConfiguration configuration, ILogger<TicketService> logger, IHttpContextAccessor httpContextAccessor)
     {
         _dbFactory = dbFactory;
         _configuration = configuration;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     private async Task<string> GenerateTicketNumberAsync()
@@ -96,7 +101,7 @@ public class TicketService : ITicketService
         if (!string.IsNullOrEmpty(serviceProviderId))
         {
             // In pooling mode, look for tickets locked by this service provider
-            query = query.Where(t => t.IsLocked && t.LockedByServiceProviderId == serviceProviderId);
+            query = query.Where(t => t.IsLocked && t.LockedByUserId == serviceProviderId);
         }
 
         // Look for tickets that are either Called or In-Service status
@@ -120,7 +125,7 @@ public class TicketService : ITicketService
         if (serviceProviderId != null)
         {
             // For pooled mode, check by service provider
-            query = query.Where(t => t.LockedByServiceProviderId == serviceProviderId);
+            query = query.Where(t => t.LockedByUserId == serviceProviderId);
         }
         else
         {
@@ -162,27 +167,134 @@ public class TicketService : ITicketService
     {
         await using var context = await _dbFactory.CreateDbContextAsync();
 
-        // Check if there's already an active ticket
-        bool hasActiveTicket = await HasActiveTicketAsync(servicePointId, serviceProviderId);
-        if (hasActiveTicket)
-        {
-            throw new InvalidOperationException("Cannot call a new ticket while another ticket is active.");
-        }
-
+        // First get the ticket to check its current status
         var ticket = await context.QueuedTickets.FirstOrDefaultAsync(t => t.TicketNumber == ticketNumber);
-        if (ticket != null)
-        {
-            ticket.Status = TicketStatus.Called;
-            await context.SaveChangesAsync();
-            TicketCalledFromQueueEvent?.Invoke(this, (ticket.TicketNumber, calledServicePointName));
-            TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
-        }
-        else
+        if (ticket == null)
         {
             throw new ArgumentException($"Ticket with number {ticketNumber} not found.");
         }
+
+        bool isPoolingEnabled = await IsPoolingEnabledAsync();
+
+        if (isPoolingEnabled)
+        {
+            // Get earlier tickets in the queue for the same service
+            var earlierTickets = await context.QueuedTickets
+                .Where(t => t.ServiceName == ticket.ServiceName &&
+                            t.PrintTime < ticket.PrintTime &&
+                            t.Status == TicketStatus.InQueue)
+                .OrderBy(t => t.PrintTime)
+                .ToListAsync();
+
+            // Check if there are any earlier tickets that aren't marked as NoShow or OnHold
+            if (earlierTickets.Any())
+            {
+                throw new InvalidOperationException(
+                    "Cannot call this ticket while earlier tickets are still waiting. " +
+                    "Please handle earlier tickets first or mark them as No Show.");
+            }
+
+        }
+        else
+        {
+            // Only get tickets ahead of the target ticket that are still in the queue
+            var earlierTickets = (await GetTicketsByServicePointIdAsync(servicePointId))
+                .Where(t => t.PrintTime < ticket.PrintTime && t.Status == TicketStatus.InQueue)
+                .ToList();
+
+            // Check if there are any earlier tickets that aren't marked as NoShow or OnHold
+            if (earlierTickets.Any())
+            {
+                throw new InvalidOperationException(
+                    "Cannot call this ticket while earlier tickets are still waiting. " +
+                    "Please handle earlier tickets first");
+            }
+        }
+
+        // Only check for active tickets if this is not a recall
+        if (ticket.Status != TicketStatus.Called)
+        {
+            // Check if there's already an active ticket, excluding the current ticket
+            bool hasActiveTicket = await HasActiveTicketAsync(servicePointId, serviceProviderId, ticketNumber);
+            if (hasActiveTicket)
+            {
+                throw new InvalidOperationException("Cannot call a new ticket while another ticket is active.");
+            }
+        }
+
+        ticket.Status = TicketStatus.Called;
+        await context.SaveChangesAsync();
+
+        TicketCalledFromQueueEvent?.Invoke(this, (ticket.TicketNumber, calledServicePointName));
+        TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
     }
 
+    // Add method to put ticket on hold
+    public async Task PutTicketOnHoldAsync(string ticketNumber)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
+        var ticket = await context.QueuedTickets
+            .FirstOrDefaultAsync(t => t.TicketNumber == ticketNumber);
+
+        if (ticket == null)
+        {
+            throw new ArgumentException($"Ticket with number {ticketNumber} not found.");
+        }
+
+        if (ticket.Status != TicketStatus.Called && ticket.Status != TicketStatus.InService)
+        {
+            throw new InvalidOperationException("Only called or in-service tickets can be put on hold.");
+        }
+
+        ticket.Status = TicketStatus.OnHold;
+
+        await context.SaveChangesAsync();
+        TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Add method to resume ticket from hold
+    public async Task ResumeTicketFromHoldAsync(string ticketNumber)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
+        var ticket = await context.QueuedTickets
+            .FirstOrDefaultAsync(t => t.TicketNumber == ticketNumber);
+
+        if (ticket == null)
+        {
+            throw new ArgumentException($"Ticket with number {ticketNumber} not found.");
+        }
+
+        if (ticket.Status != TicketStatus.OnHold)
+        {
+            throw new InvalidOperationException("Only tickets on hold can be resumed.");
+        }
+
+        ticket.Status = TicketStatus.InService;
+
+        await context.SaveChangesAsync();
+        TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
+    }
+
+    //public async Task CallTicketAsync(string ticketNumber, string calledServicePointName)
+    //{
+    //    await using var context = await _dbFactory.CreateDbContextAsync();
+    //    var ticket = await context.QueuedTickets.FirstOrDefaultAsync(t => t.TicketNumber == ticketNumber);
+
+    //    if (ticket != null)
+    //    {
+    //        ticket.Status = TicketStatus.Called;
+    //        await context.SaveChangesAsync();
+
+    //        TicketCalledFromQueueEvent?.Invoke(this, (ticket.TicketNumber, calledServicePointName));
+    //        TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
+    //    }
+    //    else
+    //    {
+    //        throw new ArgumentException($"Ticket with number {ticketNumber} not found.");
+    //    }
+    //}
 
     public async Task<Ticket?> GetTicketFromQueueAsync(string serviceName, string calledServicePointName)
     {
@@ -348,6 +460,53 @@ public class TicketService : ITicketService
             .ToListAsync();
     }
 
+    public async Task<ServicePoint> GetCurrentServicePointAsync()
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null)
+        {
+            throw new UnauthorizedAccessException("User is not authenticated");
+        }
+
+        // Parse the ID to int since your login stores it as string but it's likely an int in the database
+        if (!int.TryParse(currentUserId, out int serviceProviderId))
+        {
+            throw new InvalidOperationException("Invalid service provider ID format");
+        }
+
+        //// First, get the service provider with their associated service point
+        //var serviceProvider = await context.ServiceProviders
+        // .Include(sp => sp.Service)
+        // .FirstOrDefaultAsync(sp => sp.Id == serviceProviderId);
+
+        // Then get the current active service point assignment
+        var currentAssignment = await context.ServiceProviderAssignments
+            .Include(spa => spa.ServicePoint)
+                .ThenInclude(sp => sp.Service)
+            .FirstOrDefaultAsync(spa => spa.SystemUserId == serviceProviderId && spa.IsActive);
+
+        //if (serviceProvider == null)
+        //{
+        //    _logger.LogWarning("No service provider found with ID: {ServiceProviderId}", serviceProviderId);
+        //    throw new InvalidOperationException("Service provider not found");
+        //}
+
+        if (currentAssignment.ServicePoint == null)
+        {
+            _logger.LogWarning("Service provider {ServiceProviderId} has no associated service point", serviceProviderId);
+            throw new InvalidOperationException("No service point assigned to the current user");
+        }
+
+        return currentAssignment.ServicePoint;
+    }
+
+    private string? GetCurrentUserId()
+    {
+       return _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
 
     public async Task<List<Ticket>> GetQueuedTicketsForServicePointAsync(int servicePointId)
     {
@@ -359,7 +518,13 @@ public class TicketService : ITicketService
             .ToListAsync();
     }
 
+    // Method overload for existing calls (without timestamp)
     public async Task UpdateTicketStatusAsync(int id, string newStatus)
+    {
+        await UpdateTicketStatusAsync(id, newStatus, DateTime.Now);
+    }
+
+    public async Task UpdateTicketStatusAsync(int id, string newStatus, DateTime showUpTime)
     {
         await using var context = await _dbFactory.CreateDbContextAsync();
         var ticket = await context.QueuedTickets.FindAsync(id);
@@ -377,6 +542,12 @@ public class TicketService : ITicketService
             NoShowTickets.Add(ticket);
         }
 
+        // Set ServicePointStartTime when status changes to In-Service
+        if (newStatus == "In-Service")
+        {
+            ticket.ShowUpTime = showUpTime;
+        }
+
         await context.SaveChangesAsync();
 
         if (oldStatus == TicketStatus.Called)
@@ -387,14 +558,37 @@ public class TicketService : ITicketService
         TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task UpdateServicePointStatusAsync(int servicePointId, string status)
+    //public async Task UpdateServicePointStatusAsync(int servicePointId, string status)
+    //{
+    //    using var context = _dbFactory.CreateDbContext();
+    //    var servicePoint = await context.ServicePoints.FindAsync(servicePointId);
+    //    if (servicePoint != null)
+    //    {
+    //        servicePoint.Status = status;
+    //        await context.SaveChangesAsync();
+    //    }
+    //}
+
+    public async Task UpdateServicePointStatusAsync(int servicePointId, string newStatus)
     {
         using var context = _dbFactory.CreateDbContext();
-        var servicePoint = await context.ServicePoints.FindAsync(servicePointId);
-        if (servicePoint != null)
+
+        var servicePoint = await context.ServicePoints
+            .Include(sp => sp.Service)
+            .FirstOrDefaultAsync(sp => sp.Id == servicePointId);
+
+        if (servicePoint == null)
+            throw new ArgumentException("Service point not found", nameof(servicePointId));
+
+        // Only redistribute if status is changing from "Stepped out" to "Available"
+        bool needsRedistribution = servicePoint.Status == "Stepped out" && newStatus == "Available";
+
+        servicePoint.Status = newStatus;
+        await context.SaveChangesAsync();
+
+        if (needsRedistribution)
         {
-            servicePoint.Status = status;
-            await context.SaveChangesAsync();
+            await RedistributeTicketsAsync(servicePoint.Service.Name);
         }
     }
 
@@ -429,6 +623,21 @@ public class TicketService : ITicketService
                 .FirstOrDefaultAsync();
         }
 
+        // When not in pooling mode, check if redistribution is needed
+        var needsRedistribution = await context.QueuedTickets
+            .Where(t => t.ServiceName == serviceName)
+            .GroupBy(t => t.ServicePointId)
+            .Select(g => new { ServicePointId = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(2)
+            .ToListAsync();
+
+        // If there's significant imbalance, redistribute
+        if (needsRedistribution.Count > 1 &&
+            needsRedistribution[0].Count - needsRedistribution[1].Count > 2)
+        {
+            await RedistributeTicketsAsync(serviceName);
+        }
 
         var queueToAvailableOnlyConfig = await GetConfigurationAsync("QueueToRoomWithAvailableUsersOnly");
         bool queueToAvailableOnly = queueToAvailableOnlyConfig?.BoolValue ?? false;
@@ -474,6 +683,84 @@ public class TicketService : ITicketService
         return servicePointWithShortestQueue;
     }
 
+    public async Task RedistributeTicketsAsync(string serviceName)
+    {
+        using var context = _dbFactory.CreateDbContext();
+
+        // Get all tickets for the service that are still in queue
+        var tickets = await context.QueuedTickets
+            .Where(t => t.ServiceName == serviceName &&
+                       (t.Status == TicketStatus.InQueue || t.Status == TicketStatus.Called))
+            .OrderBy(t => t.PrintTime)
+            .ToListAsync();
+
+        if (!tickets.Any()) return;
+
+        // Get all active service points for this service
+        var servicePoints = await context.ServicePoints
+            .Where(sp => sp.Service.Name == serviceName && sp.Active)
+            .ToListAsync();
+
+        // Get configuration
+        var queueToAvailableOnlyConfig = await GetConfigurationAsync("QueueToRoomWithAvailableUsersOnly");
+        bool queueToAvailableOnly = queueToAvailableOnlyConfig?.BoolValue ?? false;
+
+        // Filter available service points based on configuration
+        var availableServicePoints = queueToAvailableOnly
+            ? servicePoints.Where(sp => sp.Status != "Stepped out").ToList()
+            : servicePoints;
+
+        if (!availableServicePoints.Any())
+        {
+            // If strict queueing is disabled, fall back to all service points
+            if (!queueToAvailableOnly)
+            {
+                availableServicePoints = servicePoints;
+            }
+            else
+            {
+                throw new InvalidOperationException($"No available service points found for service: {serviceName}");
+            }
+        }
+
+        // Calculate tickets per service point (round robin distribution)
+        int baseTicketsPerPoint = tickets.Count / availableServicePoints.Count;
+        int remainingTickets = tickets.Count % availableServicePoints.Count;
+
+        int currentTicketIndex = 0;
+
+        foreach (var servicePoint in availableServicePoints)
+        {
+            // Calculate how many tickets this service point should get
+            int ticketsForThisPoint = baseTicketsPerPoint + (remainingTickets > 0 ? 1 : 0);
+            remainingTickets--;
+
+            // Assign tickets to this service point
+            for (int i = 0; i < ticketsForThisPoint && currentTicketIndex < tickets.Count; i++)
+            {
+                var ticket = tickets[currentTicketIndex];
+
+                // Only update if the service point has changed
+                if (ticket.ServicePointId != servicePoint.Id)
+                {
+                    ticket.ServicePointId = servicePoint.Id;
+                    ticket.ServicePointAssignmentTime = DateTime.Now;
+
+                    // Reset locked status when redistributing
+                    ticket.IsLocked = false;
+                    ticket.LockedByUserId = null;
+
+                    context.QueuedTickets.Update(ticket);
+                }
+
+                currentTicketIndex++;
+            }
+        }
+
+        await context.SaveChangesAsync();
+        TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
+    }
+
     public async Task<bool> IsPoolingEnabledAsync()
     {
         await using var context = await _dbFactory.CreateDbContextAsync();
@@ -491,7 +778,7 @@ public class TicketService : ITicketService
             return false;
 
         ticket.IsLocked = true;
-        ticket.LockedByServiceProviderId = serviceProviderId;
+        ticket.LockedByUserId = serviceProviderId;
         await context.SaveChangesAsync();
         return true;
     }
@@ -504,7 +791,7 @@ public class TicketService : ITicketService
         if (ticket != null)
         {
             ticket.IsLocked = false;
-            ticket.LockedByServiceProviderId = null;
+            ticket.LockedByUserId = null;
             await context.SaveChangesAsync();
         }
     }
@@ -512,6 +799,17 @@ public class TicketService : ITicketService
     public async Task<Ticket> GenerateTicketAsync(string serviceName, string customerName,
         string customerPhoneNumber, string IdNumber, bool isEmergency = false, bool isLocked = false)
     {
+        using var context = _dbFactory.CreateDbContext();
+        //// Check for existing active tickets
+        //var existingTicket = await context.QueuedTickets
+        //    .FirstOrDefaultAsync(t => t.IdNumber == IdNumber || t.CustomerPhoneNumber == customerPhoneNumber);
+
+        //if (existingTicket != null)
+        //{
+        //    _logger.LogInformation($"You already have an active ticket (#{existingTicket.TicketNumber}) for today. Please wait for your turn.");
+        //    throw new ArgumentException("You already have an active ticket", nameof(existingTicket.TicketNumber));
+        //}
+
         var bestServicePoint = await FindBestServicePointAsync(serviceName);
         string ticketNumber = await GenerateTicketNumberAsync();
 
@@ -528,7 +826,7 @@ public class TicketService : ITicketService
             IsEmergency = isEmergency,
             ServicePointAssignmentTime = DateTime.Now,
             IsLocked = isLocked,
-            LockedByServiceProviderId = null,
+            LockedByUserId = null,
         };
 
         await AddTicketToQueueAsync(ticket);
@@ -601,7 +899,7 @@ public class TicketService : ITicketService
         }
 
         var averageServiceTime = recentTickets
-            .Select(st => (st.FinishTime - st.ShowTime).TotalMinutes)
+            .Select(st => (st.FinishTime - st.ShowUpTime).TotalMinutes)
             .Average();
 
         return TimeSpan.FromMinutes(averageServiceTime);

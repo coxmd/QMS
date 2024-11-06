@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Report ScriptLanguage="CSharp" UseFileCache="true" ReportInfo.Created="12/27/2023 11:05:36" ReportInfo.Modified="10/21/2024 11:06:07" ReportInfo.CreatorVersion="2024.1.2.0">
+<Report ScriptLanguage="CSharp" UseFileCache="true" ReportInfo.Created="12/27/2023 11:05:36" ReportInfo.Modified="10/31/2024 08:42:04" ReportInfo.CreatorVersion="2024.1.2.0">
   <Dictionary>
     <TableDataSource Name="Categories" ReferenceName="NorthWind.Categories" DataType="System.Int32" Enabled="true">
       <Column Name="CategoryID" DataType="System.Int32"/>
@@ -131,19 +131,19 @@
     <Parameter Name="URL" DataType="System.String" AsString=""/>
   </Dictionary>
   <ReportPage Name="Page1" Watermark.Font="Arial, 60pt" LastPageSource="1" FirstPageSource="1">
-    <PageHeaderBand Name="PageHeader1" Width="718.2" Height="37.8">
-      <TextObject Name="Text5" Left="-9.45" Top="9.45" Width="245.7" Height="28.35" Text="Please wait for you ticket number to be called to head to the appropriate service point." HorzAlign="Center" Font="Arial Narrow, 7pt, style=Bold, Italic"/>
+    <PageHeaderBand Name="PageHeader1" Width="718.2" Height="89.55">
+      <TextObject Name="Text5" Left="-47.25" Top="9.45" Width="245.7" Height="28.35" Text="Scan QR Code to track queue status" HorzAlign="Center" Font="Arial Narrow, 7pt, style=Bold, Italic"/>
+      <BarcodeObject Name="Barcode1" Left="151.2" Top="-9.45" Width="69.6" Height="69.6" Text="[URL]" ShowText="false" Zoom="0.6" AllowExpressions="true" Barcode="QR Code" Barcode.ErrorCorrection="L" Barcode.Encoding="UTF8" Barcode.QuietZone="true" Barcode.ShowMarker="true"/>
     </PageHeaderBand>
-    <DataBand Name="Data1" Top="40.47" Width="718.2" Height="300.2">
-      <TextObject Name="Text2" Left="18.9" Top="132.3" Width="151.2" Height="28.35" Text="Service Point:" AutoWidth="true" VertAlign="Center" Font="Arial, 7pt, style=Bold"/>
+    <DataBand Name="Data1" Top="92.22" Width="718.2" Height="300.2">
+      <TextObject Name="Text2" Left="47.25" Top="132.3" Width="151.2" Height="28.35" Text="Service:" AutoWidth="true" VertAlign="Center" Font="Arial, 7pt, style=Bold"/>
       <TextObject Name="TicketNo" Left="-94.5" Top="66.15" Width="415.8" Height="28.35" Text="[TicketNo]" HorzAlign="Center" VertAlign="Center" Font="Arial, 18pt, style=Bold"/>
-      <TextObject Name="serviceID" Left="28.35" Top="132.3" Width="255.15" Height="28.35" Text="[serviceID]" HorzAlign="Center" VertAlign="Center" Font="Arial, 7pt, style=Bold"/>
+      <TextObject Name="serviceID" Left="18.9" Top="132.3" Width="255.15" Height="28.35" Text="[serviceID]" HorzAlign="Center" VertAlign="Center" Font="Arial, 7pt, style=Bold"/>
       <TextObject Name="Text12" Left="37.8" Top="37.8" Width="141.75" Height="18.9" Text="Ticket Number" HorzAlign="Center" Font="Arial, 10pt, style=Bold"/>
       <TextObject Name="Text3" Left="-37.8" Top="103.95" Width="151.2" Height="28.35" Text="Visit Date:" AutoWidth="true" HorzAlign="Center" VertAlign="Center" Font="Arial, 8pt, style=Bold"/>
       <TextObject Name="printTime" Left="-9.45" Top="103.95" Width="302.4" Height="28.35" Text="[printTime]" HorzAlign="Center" VertAlign="Center" Font="Arial, 7pt, style=Bold"/>
       <TextObject Name="Text17" Left="56.7" Width="103.95" Height="28.35" Text="Q" HorzAlign="Center" Font="Arial, 18pt, style=Bold"/>
-      <BarcodeObject Name="Barcode1" Left="75.6" Top="151.2" Width="88.8" Height="99" Text="Queue/TicketTrackingPage/[TicketNo]" Zoom="0.6" AllowExpressions="true" Barcode="QR Code" Barcode.ErrorCorrection="L" Barcode.Encoding="UTF8" Barcode.QuietZone="true" Barcode.ShowMarker="true"/>
     </DataBand>
-    <PageFooterBand Name="PageFooter1" Top="343.33" Width="718.2" Height="28.35"/>
+    <PageFooterBand Name="PageFooter1" Top="395.08" Width="718.2" Height="28.35"/>
   </ReportPage>
 </Report>

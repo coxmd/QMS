@@ -24,7 +24,7 @@
                 <!-- First Column -->
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <label class="form-label">Service Point Name <span class="text-danger">*</span></label>
                         <InputText class="form-control" @bind-Value="newServicePoint!.Name" />
                         <ValidationMessage For="@(() => newServicePoint.Name)" />
                     </div>
@@ -36,7 +36,7 @@
                 <div class="col-md-4">
                    
                     <div class="mb-3">
-                        <label class="form-label">Service Point <span class="text-danger">*</span></label>
+                        <label class="form-label">Select Service <span class="text-danger">*</span></label>
                         <InputSelect class="form-select" @bind-Value="newServicePoint.ServiceId">
                             @foreach (var service in services)
                             {
@@ -52,7 +52,7 @@
                    
                     <div class="mb-3" >
                         <label class="form-label">Active <span class="text-danger">*</span></label>
-                        <Switch Class="large-switch" @bind-Value="newServicePoint.Active" Label="Is Active?" />
+                        <Switch class="large-switch" @bind-Value="newServicePoint.Active" Label="Is Active?" />
                     </div>
 
                 </div>
@@ -122,7 +122,7 @@ else
             </GridColumn>
             <GridColumn TItem="ServicePoint" HeaderText="Is Active" SortString="Active" SortKeySelector="item => item.Active">
                
-                        <Switch Class="mt-2 large-switch" @bind-Value="context.Active" Color="SwitchColor.Primary" />
+                        <Switch Class="large-switch" @bind-Value="context.Active" Color="SwitchColor.Primary" />
                   
             </GridColumn>
         </Grid>
@@ -131,7 +131,7 @@ else
 <style>
     .large-switch {
         transform: scale(1.5);
-        margin-left: 6.5rem;
+        margin-left: 15.5rem;
     }
 
     .switch-container {

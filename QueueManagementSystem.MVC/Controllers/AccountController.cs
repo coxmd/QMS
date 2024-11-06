@@ -6,8 +6,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QueueManagementSystem.MVC.Components;
 using QueueManagementSystem.MVC.Data;
 using QueueManagementSystem.MVC.Models;
+using QueueManagementSystem.MVC.Models.Privileges;
+using QueueManagementSystem.MVC.Models.Users;
 using QueueManagementSystem.MVC.Services;
 
 namespace Queue_Management_System.Controllers
@@ -15,11 +18,13 @@ namespace Queue_Management_System.Controllers
     public class AccountController : Controller
     {
         private readonly IAuthService _authService;
+        private readonly PrivilegeService _privilegeService;
         private readonly IDbContextFactory<QueueManagementSystemContext> _dbFactory;
 
-        public AccountController(IAuthService authService, IDbContextFactory<QueueManagementSystemContext> dbFactory)
+        public AccountController(PrivilegeService privilegeService, IAuthService authService, IDbContextFactory<QueueManagementSystemContext> dbFactory)
         {
             _authService = authService;
+            _privilegeService = privilegeService;
             _dbFactory = dbFactory;
         }
 
@@ -28,6 +33,17 @@ namespace Queue_Management_System.Controllers
         {
             return View();
         }
+        [HttpGet]
+        public IActionResult Registration()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult Registration(SystemUsersModel systemUsers)
+        {
+            return View();
+        }
+
         [HttpGet]
         public IActionResult ChangePassword()
         {
@@ -41,7 +57,7 @@ namespace Queue_Management_System.Controllers
                 return View();
             }
             using var context = _dbFactory.CreateDbContext();
-            var user = context.ServiceProviders.FirstOrDefault(s => s.Email == change.UserEmail);
+            var user = context.SystemUsers.FirstOrDefault(s => s.Username == change.UserEmail);
             if (user == null)
             {
                 // Handle user not found case
@@ -73,37 +89,51 @@ namespace Queue_Management_System.Controllers
             }
 
         [HttpPost]
-        public async Task<IActionResult> Login(LoginModel user, string returnUrl=null)
+        public async Task<IActionResult> Login(LoginModel user)
         {
             if (!ModelState.IsValid)
             {
                 return View();
             }
             using var context = _dbFactory.CreateDbContext();
-            var userEmail = context.ServiceProviders.FirstOrDefault(s => s.Email == user.Email);
-             if(userEmail == null)
+            var userName = context.SystemUsers.FirstOrDefault(s => s.Username == user.UserName);
+             if(userName == null)
             {
                 // Handle user not found case
-                ModelState.AddModelError(string.Empty, "Email not Registered ");
+                ModelState.AddModelError(string.Empty, "Invalid Username ");
                 return View();
             }
 
             var serviceProvider = await _authService.Authenticate(user)!;
             if (serviceProvider == null)
             {
-                ModelState.AddModelError(string.Empty, "Invalid login attempt");
+                ModelState.AddModelError(string.Empty, "Wrong Password");
                 return View();
             }
+            if (userName.Active==false)
+            {
+                ModelState.AddModelError(string.Empty, "User not active");
+                return View();
+            }
+            var Rolename = context.Roles.FirstOrDefault(s => s.Id == serviceProvider.Role);
 
-            string? role = serviceProvider.IsAdmin ? "Admin" : "";
+            //string? role = serviceProvider.IsAdmin ? "Admin" : "";
 
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, serviceProvider.Id.ToString()),
-                new Claim(ClaimTypes.Name, serviceProvider.FullNames!),
-                new Claim(ClaimTypes.Email, serviceProvider.Email!),
-                new Claim(ClaimTypes.Role, role)
+                new Claim(ClaimTypes.Name, serviceProvider.Surname),
+                new Claim(ClaimTypes.Role, Rolename.Name)
             };
+
+            // Add privileges as claims
+
+            var privileges = context.RolePrivileges.Where(p => p.RoleId == serviceProvider.Role).Select(p => p.Privilege).ToList();
+            foreach (var privilege in privileges)                 
+            {
+                claims.Add(new Claim("Privilege", privilege.Name));
+                
+            }
 
             var claimsIdentity = new ClaimsIdentity(claims, "MyCookieScheme");
 
@@ -115,19 +145,26 @@ namespace Queue_Management_System.Controllers
 
             await HttpContext.SignInAsync("MyCookieScheme", new ClaimsPrincipal(claimsIdentity), authProperties);
 
-            if (returnUrl != null)
+            // Redirect based on role
+            return Rolename.Name switch
             {
-               return LocalRedirect(returnUrl); 
-            }
-            else return RedirectToAction("Index", "Home");
-                   
+                "Admin" => RedirectToAction("Dashboard", "Admin"),
+                "Service Provider" => RedirectToAction("ServicePoint", "Queue"),
+                _ => RedirectToAction("ServicePoint", "Queue") // Default to ServicePoint if role is unknown
+            };
+
         }
 
         [HttpGet]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync("MyCookieScheme");
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Login", "Account");
+        }
+
+        public IActionResult AccessDenied()
+        {
+            return View();
         }
     }
 }

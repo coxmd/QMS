@@ -4,7 +4,7 @@
 
 <div class="text-center">
     <h1 class="dashboard-title">Welcome to QMS Admin Dashboard</h1>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
         <!-- Card 1: Configure Services -->
         <div class="col">
             <a href="@Url.Action("ConfigureServices", "Admin")" class="text-decoration-none">
@@ -31,11 +31,12 @@
 
         <!-- Card 3: Configure Service Providers -->
         <div class="col">
-            <a href="@Url.Action("ConfigureServiceProviders", "Admin")" class="text-decoration-none">
+            <a href="@Url.Action("Registration", "Account")" class="text-decoration-none">
+            @* <a href="@Url.Action("ConfigureServiceProviders", "Admin")" class="text-decoration-none"> *@
                 <div class="dashboard-card text-center">
                     <div class="card-body">
                         <i class="fas fa-briefcase fa-2x mb-3"></i>
-                        <h5 class="card-title">Service Providers</h5>
+                        <h5 class="card-title">System Users</h5>
                     </div>
                 </div>
             </a>
@@ -112,6 +113,40 @@
                 </div>
             </a>
         </div>
+        <!-- Card 10: System Users -->
+        <div class="col">
+            <a href="@Url.Action("UserRole", "Admin")" class="text-decoration-none">
+                <div class="dashboard-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-film fa-2x mb-3"></i>
+                        <h5 class="card-title">User Roles</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- Card 11: Privileges  -->
+        <div class="col">
+            <a href="@Url.Action("Privilege", "Admin")" class="text-decoration-none">
+                <div class="dashboard-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-film fa-2x mb-3"></i>
+                        <h5 class="card-title">Privileges</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card 11: Privileges  -->
+        <div class="col">
+            <a href="@Url.Action("CompanyInformation", "Admin")" class="text-decoration-none">
+                <div class="dashboard-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-film fa-2x mb-3"></i>
+                        <h5 class="card-title">Company Information</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
 </div>
 
@@ -135,24 +170,25 @@
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    .dashboard-card:hover {
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-        transform: translateY(-5px);
-    }
+        .dashboard-card:hover {
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(-5px);
+        }
 
-    .dashboard-card i {
-        color: #00A3A3;
-    }
+        .dashboard-card i {
+            color: #00A3A3;
+        }
 
-    .dashboard-card h5 {
-        font-weight: 600;
-        margin-top: 10px;
-    }
+        .dashboard-card h5 {
+            font-weight: 600;
+            margin-top: 10px;
+        }
 
     @@media (max-width: 767px) {
         .dashboard-title {
             font-size: 1.5rem;
         }
+
         .dashboard-card {
             padding: 15px;
         }

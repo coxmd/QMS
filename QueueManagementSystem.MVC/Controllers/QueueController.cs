@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QueueManagementSystem.MVC.Models.Privileges;
 using QueueManagementSystem.MVC.Services;
 
 namespace Queue_Management_System.Controllers
@@ -33,16 +34,20 @@ namespace Queue_Management_System.Controllers
         {
             return View();
         }
-        
+
+        [HasPrivilege(PrivilegeConstants.AccessServicePoint)]
         [Authorize, HttpGet]
         public IActionResult ServicePoint()
         {
+            ViewData["BreadcrumbTitle"] = "Service Point";
             return View();
         }
 
+        [HasPrivilege(PrivilegeConstants.ViewMainQueue)]
         [HttpGet]
         public IActionResult MainQueue()
         {
+            ViewData["BreadcrumbTitle"] = "Main Queue";
             return View();
         }
 

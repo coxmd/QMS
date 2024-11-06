@@ -31,7 +31,10 @@
         <label for="reportType">Report Type:</label>
         <InputSelect id="reportType" @bind-Value="reportParameters.ReportType" class="form-control">
             <option value="">Select a report type...</option>
-            <option value="AverageWaitingTime">Average Waiting Time</option>
+            <option value="AverageWaitingTimePerService">Average Waiting Time Per Service</option>
+            <option value="AverageWaitingTimePerServicePoint">Average Waiting Time Per Service Point</option>
+            <option value="AverageServiceTimePerService">Average Service Time Per Service</option>
+            <option value="AverageServiceTimePerServicePoint">Average Service Time Per Service Point</option>
             <option value="CustomersServed">Customers Served</option>
         </InputSelect>
     </div>

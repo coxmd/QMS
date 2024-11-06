@@ -35,16 +35,17 @@
                         </InputSelect>
                         <ValidationMessage For="@(() => newService.ServiceCategoryId)" />
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Active <span class="text-danger">*</span></label>
-                        <Switch Class="mt-2 large-switch" @bind-Value="newService.Active" Label="Is Active?" />
-                    </div>
+                   
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Description <span class="text-danger">*</span></label>
                         <InputTextArea class="form-control" @bind-Value="newService.Description" />
                         <ValidationMessage For="@(() => newService.Description)" />
+                    </div>
+                     <div class="mb-3">
+                        <label class="form-label">Active <span class="text-danger">*</span></label>
+                        <Switch class="large-switch" @bind-Value="newService.Active" Label="Is Active?" />
                     </div>
                 </div>
             </div>
@@ -108,7 +109,7 @@ else
                 @context.ServiceCategory?.Name
             </GridColumn>
             <GridColumn TItem="Service" HeaderText="Is Active" SortString="Active" SortKeySelector="item => item.Active">
-                <Switch Class="mt-2 large-switch" @bind-Value="context.Active" />
+                <Switch Class="large-switch" @bind-Value="context.Active" />
             </GridColumn>
         </Grid>
     </div>
@@ -117,7 +118,7 @@ else
 <style>
     .large-switch {
         transform: scale(1.5);
-        margin-left: 6.5rem;
+        margin-left: 15.5rem;
     }
 
     .selected-row {
@@ -198,6 +199,7 @@ else
                     HelpText = $"{DateTime.Now}",
                     Message = "Service details added successfully."
                 });
+            ServiceUpdatedEvent?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
@@ -220,12 +222,16 @@ else
                     HelpText = $"{DateTime.Now}",
                     Message = "Service detail edited successfully."
                 });
+            ServiceUpdatedEvent?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
         }
+
     }
+
+    public event EventHandler? ServiceUpdatedEvent;
 
     private async Task OnDeleteAsync(Service service)
     {

@@ -11,13 +11,14 @@ namespace QueueManagementSystem.MVC.Models
         public string ServiceName {get; set;}
         public DateTime PrintTime {get; set;}
         public DateTime ServicePointAssignmentTime { get; set; }
+        public DateTime ShowUpTime { get; set; }
         public string Status {get; set;}
-        public string? CustomerName { get; set; }
-        public string? CustomerPhoneNumber { get; set; }
+        public string? CustomerName { get; set; } = null;
+        public string? CustomerPhoneNumber { get; set; } = null;
         public bool? IsEmergency { get; set; }
-        public string? IdNumber { get; set; }
+        public string? IdNumber { get; set; } = null;
         public bool IsLocked { get; set; }
-        public string? LockedByServiceProviderId { get; set; }
+        public string? LockedByUserId { get; set; }
         public bool WasNoShow { get; set; } = false;
         public DateTime? LastNoShowTime { get; set; }
 

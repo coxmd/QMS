@@ -149,13 +149,15 @@
         });
 
         var servedTicket = new ServedTicket {
-            TicketNumber = calledTicket.TicketNumber,
-            ServiceName = calledTicket.ServiceName,
-            PrintTime = calledTicket.PrintTime,
-            ShowTime = showUpTime,
-            FinishTime = finishTime,
-            ServiceId = service.Id,
-            ServicePointId = calledTicket.ServicePointId
+                TicketNumber = calledTicket.TicketNumber,
+                CustomerName = calledTicket.CustomerName,
+                CustomerPhoneNumber = calledTicket.CustomerPhoneNumber,
+                ServiceName = calledTicket.ServiceName,
+                PrintTime = calledTicket.PrintTime,
+                ShowUpTime = calledTicket.ShowUpTime,
+                FinishTime = finishTime,
+                ServiceId = service.Id,
+                ServicePointId = calledTicket.ServicePointId
         };
 
         //TicketService.RemoveTicketFromQueue(calledTicket);
@@ -215,23 +217,23 @@
 
     protected override async Task OnInitializedAsync()
     {
-        OfferedServices = await DbContextManager.ExecuteInContextAsync(async context =>
-        {
-            return await context.Services.ToListAsync();
-        });
+        // OfferedServices = await DbContextManager.ExecuteInContextAsync(async context =>
+        // {
+        //     return await context.Services.ToListAsync();
+        // });
 
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var serviceProviderId = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        // var user = authState.User;
+        // var serviceProviderId = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
-        var serviceProvider = await DbContextManager.ExecuteInContextAsync(async context =>
-        {
-            return await context.ServiceProviders
-                .Include(sp => sp.ServicePoint!.Service)
-                .SingleOrDefaultAsync(sp => sp.Id.ToString() == serviceProviderId);
-        });
-        servicePointName = serviceProvider!.ServicePoint!.Name;
-        serviceName = serviceProvider.ServicePoint.Service!.Name;
+        // var serviceProvider = await DbContextManager.ExecuteInContextAsync(async context =>
+        // {
+        //     return await context.ServiceProviders
+        //         .Include(sp => sp.ServicePoint!.Service)
+        //         .SingleOrDefaultAsync(sp => sp.Id.ToString() == serviceProviderId);
+        // });
+        // servicePointName = serviceProvider!.ServicePoint!.Name;
+        // serviceName = serviceProvider.ServicePoint.Service!.Name;
     }
 
 }

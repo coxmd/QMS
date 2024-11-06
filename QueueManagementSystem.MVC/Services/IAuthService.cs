@@ -1,9 +1,10 @@
 using QueueManagementSystem.MVC.Models;
+using QueueManagementSystem.MVC.Models.Users;
 
 namespace QueueManagementSystem.MVC.Services
 {
     public interface IAuthService
     {
-        Task<Models.ServiceProvider>? Authenticate(LoginModel user);
+        Task<SystemUsersModel>? Authenticate(LoginModel user);
     }
 }

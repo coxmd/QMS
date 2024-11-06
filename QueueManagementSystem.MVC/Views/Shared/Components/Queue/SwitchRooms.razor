@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Components
+﻿@* @using Microsoft.AspNetCore.Components
 @using QueueManagementSystem.MVC.Models
 @using QueueManagementSystem.MVC.Services
 @using Microsoft.EntityFrameworkCore
@@ -40,18 +40,26 @@
         await DbContextManager.ExecuteInContextAsync(async context =>
         {
             var serviceProvider = await context.ServiceProviders
-                .Include(sp => sp.ServicePoint)
-                .Include(sp => sp.ServicePoint!.Service)
+                .Include(sp => sp.Service)
                 .SingleOrDefaultAsync(sp => sp.Id.ToString() == serviceProviderId);
 
-            currentServicePointName = serviceProvider!.ServicePoint!.Name!;
-            currentServicePointId = serviceProvider.ServicePoint.Id;
-            originalServicePointName = currentServicePointName;
-            originalServicePointId = currentServicePointId;
-            currentServiceProviderId = serviceProvider.Id;
+            var currentServicePointQuery = await context.ServicePoints
+                .Where(sp => sp.ServiceId == serviceProvider!.ServiceId)
+                .FirstOrDefaultAsync();
 
+            if (currentServicePointQuery != null)
+            {
+                currentServicePointName = currentServicePointQuery.Name!;
+                currentServicePointId = currentServicePointQuery.Id;
+                originalServicePointName = currentServicePointName;
+                originalServicePointId = currentServicePointId;
+            }
+
+            currentServiceProviderId = serviceProvider!.Id;
+
+            // Get all service points that offer the service provider's service
             availableServicePoints = await context.ServicePoints
-                .Where(sp => sp.Service!.Id == serviceProvider.ServicePoint.Service!.Id)
+                .Where(sp => sp.ServiceId == serviceProvider.ServiceId)
                 .ToListAsync();
         });
     }
@@ -68,8 +76,26 @@
 
             await DbContextManager.ExecuteInContextAsync(async context =>
             {
-                var serviceProvider = await context.ServiceProviders.FindAsync(currentServiceProviderId);
-                serviceProvider!.ServicePointId = newServicePointId;
+                // Deactivate current assignment
+                var currentAssignment = await context.ServiceProviderAssignments
+                    .Where(spa => spa.ServiceProviderId == currentServiceProviderId && spa.IsActive)
+                    .FirstOrDefaultAsync();
+
+                if (currentAssignment != null)
+                {
+                    currentAssignment.IsActive = false;
+                }
+
+                // Create new assignment
+                var newAssignment = new ServiceProviderAssignment
+                    {
+                        ServiceProviderId = currentServiceProviderId,
+                        ServicePointId = newServicePointId,
+                        AssignmentTime = DateTime.UtcNow,
+                        IsActive = true
+                    };
+
+                context.ServiceProviderAssignments.Add(newAssignment);
                 await context.SaveChangesAsync();
 
                 var newServicePoint = await context.ServicePoints.FindAsync(newServicePointId);
@@ -91,4 +117,4 @@
             await OnRoomSwitched.InvokeAsync(newServicePointId);
         }
     }
-}
+} *@

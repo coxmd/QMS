@@ -4,12 +4,12 @@
 }
 
 <!DOCTYPE html>
-    <html>
-        
-    <body>
-          <div >
-            @(await Html.RenderComponentAsync<ConfigureServiceProviders>(RenderMode.ServerPrerendered))
-        </div>
-    </body> 
+<html>
+
+<body>
+    <div>
+        @(await Html.RenderComponentAsync<SystemUsers>(RenderMode.ServerPrerendered))
+    </div>
+</body>
 </html>
 

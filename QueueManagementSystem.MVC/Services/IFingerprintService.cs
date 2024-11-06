@@ -9,6 +9,7 @@ namespace QueueManagementSystem.MVC.Services
         Task<FingerprintResult> EnrollAsync();
         Task<FingerprintResult> SearchIdnoAsync(CustomerInfo customer);
         Task<FingerprintResult> ContinuousScanAsync(CustomerInfo customer);
+        Task<FingerprintResult> MatchFingerPrintAsync(CustomerInfo customer);
         Task<FingerprintResult> AuthenticateAsync();
         Task CloseDeviceAsync();
         Task<int> GetDeviceCountAsync();

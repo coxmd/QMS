@@ -6,6 +6,7 @@ using QueueManagementSystem.MVC.Services;
 using QueueManagementSystem.MVC.Components;
 using Serilog.Events;
 using Serilog;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,18 +26,39 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog(); // Use Serilog for logging
 
+builder.Services.AddSignalR();
 // Add services to the container.
 builder.Services.AddHttpClient();
 builder.Services.AddControllersWithViews();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddServerSideBlazor()
+    .AddCircuitOptions(options => { options.DetailedErrors = true; }); ;
+
 builder.Services.AddFastReport();
 builder.Services.AddBlazorBootstrap();
 
-builder.Services.AddAuthentication().AddCookie("MyCookieScheme", options => {
-    options.LoginPath = "/Account/Login";
-    options.AccessDeniedPath = "/Account/Login";
-});
+builder.Services.AddAuthentication("MyCookieScheme")
+    .AddCookie("MyCookieScheme", options => {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Home/AccessDenied";
+        options.Cookie.Name = "QMSAuth";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+        options.SlidingExpiration = true;
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnRedirectToLogin = context =>
+            {
+                if (context.Request.Path.StartsWithSegments("/Account/Login") &&
+                    context.Response.StatusCode == 200 &&
+                    context.HttpContext.User.Identity.IsAuthenticated)
+                {
+                    context.RedirectUri = "/Home/Index";
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ITicketService, TicketService>();
 builder.Services.AddSingleton<IReportService, ReportService>();
 builder.Services.AddScoped<IAuthService, AuthService>(); ;
@@ -49,6 +71,9 @@ builder.Services.AddScoped<IDbContextManager, DbContextManager>();
 builder.Services.AddHostedService<QueueCleanupBackgroundService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ServicePointService>();
+builder.Services.AddScoped<PrivilegeService>();
+builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<SystemUsersService>();
 builder.Services.AddDbContextFactory<QueueManagementSystemContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<QueueManagementSystemContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
@@ -67,6 +92,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+PrivilegeSeeder.SeedPrivileges(app);
+
 // REVIEW: Seeding is done for development ease but shouldn't be here in production
 //using (var scope = app.Services.CreateScope())
 //{
@@ -77,7 +104,7 @@ if (!app.Environment.IsDevelopment())
 //    QueueManagementSystemContextSeeder.SeedServiceProviders(context);
 //    QueueManagementSystemContextSeeder.ResetQueue(context);
 //}
-
+app.MapHub<FingerprintHub>("/fingerprintHub");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 

@@ -1,4 +1,4 @@
-@using QueueManagementSystem.MVC.Models
+@* @using QueueManagementSystem.MVC.Models
 @using Microsoft.EntityFrameworkCore
 @using QueueManagementSystem.MVC.Data
 @using System.Text.Json
@@ -46,10 +46,10 @@
                         </InputSelect>
                         <ValidationMessage For="@(() => newServiceProvider.ServicePointId)" />
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" hidden="hidden" >
 
                         <label class="form-label">Password <span class="text-danger">*</span></label>
-                        <InputText class="form-control" @bind-Value="newServiceProvider!.Password" />
+                        <InputText  class="form-control" @bind-Value="newServiceProvider!.Password" />
                         <ValidationMessage For="@(() => newServiceProvider.Password)" />
                     </div>
             </div>
@@ -63,7 +63,7 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Active <span class="text-danger">*</span></label>
-                        <Switch Class="mt-2 large-switch" @bind-Value="newServiceProvider.Active" Label="Is Active?" />
+                        <Switch Class="large-switch" @bind-Value="newServiceProvider.Active" Label="Is Active?" />
                     </div>
         </div>
         </div>
@@ -145,7 +145,7 @@ else
 </GridColumn>
          <GridColumn TItem="ServiceProvider" HeaderText="Is Active" SortString="Active" SortKeySelector="item => item.Active">
          
-             <Switch Class=" large-switch" @bind-Value="context.Active" />
+             <Switch class=" large-switch" @bind-Value="context.Active" />
             
         </GridColumn> 
         
@@ -157,7 +157,7 @@ else
 <style>
     .large-switch {
         transform: scale(1.5);
-        margin-left: 6.5rem;
+        margin-left: 15.5rem;
     }
     .selected-row {
         background-color: #daf1de; /* Change this to your desired color */
@@ -300,3 +300,4 @@ else
         servicePoints = await context.ServicePoints.OrderBy(sp => sp.Id).ToListAsync();
     }
 }
+ *@

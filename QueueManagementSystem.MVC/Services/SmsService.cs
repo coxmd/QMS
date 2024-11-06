@@ -28,11 +28,11 @@ namespace QueueManagementSystem.MVC.Services
             // Prepare request headers
             _httpClient.DefaultRequestHeaders.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", smsSettings!.Token);
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", smsSettings!.Url);
 
              var smsPayload = new
             {
-                senderID = smsSettings!.SenderId,
+                senderID = smsSettings!.Name,
                 message = message,
                 phones = to 
             };
