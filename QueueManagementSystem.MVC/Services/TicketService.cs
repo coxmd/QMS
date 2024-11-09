@@ -840,6 +840,7 @@ public class TicketService : ITicketService
         await context.SaveChangesAsync();
 
         TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
+        TicketAddedToQueueEvent?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task<int> GetCustomersAheadCountAsync(int ticketId)
@@ -998,7 +999,26 @@ public class TicketService : ITicketService
         TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
     }
 
+    public async Task UnmarkTicketAsEmergencyAsync(int ticketId)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+        var ticket = await context.QueuedTickets
+            .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+        if (ticket == null)
+        {
+            throw new ArgumentException("Ticket not found", nameof(ticketId));
+        }
+
+        ticket.IsEmergency = false;
+        await context.SaveChangesAsync();
+
+        // Notify subscribers that the queue has been altered
+        TicketQueueAlteredEvent?.Invoke(this, EventArgs.Empty);
+    }
+
     public event EventHandler? TicketQueueAlteredEvent;
+    public event EventHandler? TicketAddedToQueueEvent;
     public event EventHandler<(string, string)>? TicketCalledFromQueueEvent;
     public event EventHandler<string>? TicketRemovedFromCalledEvent;
 

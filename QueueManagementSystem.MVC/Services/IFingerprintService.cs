@@ -6,11 +6,11 @@ namespace QueueManagementSystem.MVC.Services
     {
         Task<bool> InitializeAsync();
         Task<bool> OpenDeviceAsync();
-        Task<FingerprintResult> EnrollAsync();
-        Task<FingerprintResult> SearchIdnoAsync(CustomerInfo customer);
-        Task<FingerprintResult> ContinuousScanAsync(CustomerInfo customer);
-        Task<FingerprintResult> MatchFingerPrintAsync(CustomerInfo customer);
-        Task<FingerprintResult> AuthenticateAsync();
+        Task<AuthenticationResult> EnrollAsync();
+        Task<AuthenticationResult> SearchIdnoAsync(CustomerInfo customer);
+        Task<AuthenticationResult> ContinuousScanAsync(CustomerInfo customer);
+        Task<AuthenticationResult> MatchFingerPrintAsync(CustomerInfo customer);
+        Task<AuthenticationResult> AuthenticateAsync();
         Task CloseDeviceAsync();
         Task<int> GetDeviceCountAsync();
     }

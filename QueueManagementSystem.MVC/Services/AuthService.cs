@@ -17,7 +17,10 @@ namespace QueueManagementSystem.MVC.Services
 
         public async Task<SystemUsersModel?> Authenticate(LoginModel user)
         {
-            SystemUsersModel? provider = await _context.SystemUsers.SingleOrDefaultAsync(sp => sp.Username == user.UserName);
+            SystemUsersModel? provider = await _context.SystemUsers
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Username == user.UserName);
 
             if (provider == null || !BCrypt.Net.BCrypt.Verify(user.Password, provider.Password))
             {

@@ -112,6 +112,10 @@ else
             {
                 <Button Size="ButtonSize.Small" Color="ButtonColor.Warning" @onclick="() => MarkAsEmergency(context)">Mark Emergency</Button>
             }
+            @if (context.IsEmergency == true)
+            {
+                <Button Size="ButtonSize.Small" Color="ButtonColor.Warning" @onclick="() => UnmarkAsEmergency(context)">Unmark As Emergency</Button>
+            }
         </GridColumn>
     </Grid>
     </div>
@@ -228,6 +232,18 @@ else
     private async Task MarkAsEmergency(Ticket ticket)
     {
         await TicketService.MarkTicketAsEmergencyAsync(ticket.Id);
+        await LoadTickets();
+        ToastService.Notify(new ToastMessage
+            {
+                Type = ToastType.Warning,
+                Title = "Emergency Case",
+                Message = $"Ticket {ticket.TicketNumber} has been marked as emergency case."
+            });
+    }
+
+    private async Task UnmarkAsEmergency(Ticket ticket)
+    {
+        await TicketService.UnmarkTicketAsEmergencyAsync(ticket.Id);
         await LoadTickets();
         ToastService.Notify(new ToastMessage
             {

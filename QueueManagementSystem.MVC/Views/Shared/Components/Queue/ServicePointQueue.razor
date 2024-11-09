@@ -432,16 +432,71 @@ else
     private Modal serviceSelectionModal;
     private string pendingSelectedService = "";
     private string selectedService = "";
+    private List<Ticket> previousTickets = new List<Ticket>();
 
 
     private async void OnTicketQueueAltered(object sender, EventArgs e)
     {
         await InvokeAsync(async () =>
         {
+            var newTickets = await TicketService.GetTicketsByServicePointIdAsync(servicePointId);
+
+            // Check if there are new tickets (more tickets than before)
+            if (newTickets != null && previousTickets != null &&
+                newTickets.Count > previousTickets.Count)
+            {
+                // Play notification sound
+                await PlayNotificationSound();
+
+                // Update the UI with new message
+                ToastService.Notify(new ToastMessage
+                    {
+                        Type = ToastType.Info,
+                        Title = "New Ticket",
+                        Message = "A new customer has been queued to your room"
+                    });
+
+                previousTickets = newTickets;
+                queuedTickets = newTickets;
+            }
+
             queuedTickets = await TicketService.GetTicketsByServicePointIdAsync(servicePointId);
             await RefreshQueuedTickets();
             StateHasChanged();
         });
+    }
+
+    // private async void OnTicketAddedToQueue(object sender, EventArgs e)
+    // {
+    //     await InvokeAsync(async () =>
+    //     {
+    //         var newTickets = await TicketService.GetTicketsByServicePointIdAsync(servicePointId);
+
+    //         // Check if there are new tickets (more tickets than before)
+    //         if (newTickets != null && previousTickets != null &&
+    //             newTickets.Count > previousTickets.Count)
+    //         {
+    //             // Play notification sound
+    //             await PlayNotificationSound();
+
+    //             // Update the UI with new message
+    //             ToastService.Notify(new ToastMessage
+    //                 {
+    //                     Type = ToastType.Info,
+    //                     Title = "New Ticket",
+    //                     Message = "A new customer has been queued to your room"
+    //                 });
+    //         }
+
+    //         previousTickets = newTickets;
+    //         queuedTickets = newTickets;
+    //         StateHasChanged();
+    //     });
+    // }
+
+    private async Task PlayNotificationSound()
+    {
+        await JS.InvokeVoidAsync("playNotificationSound");
     }
 
 
@@ -460,6 +515,7 @@ else
         await LoadServiceProviderData();
         await LoadServices();
         TicketService.TicketQueueAlteredEvent += OnTicketQueueAltered;
+        // TicketService.TicketAddedToQueueEvent += OnTicketAddedToQueue;
 
         isPoolingEnabled = await TicketService.IsPoolingEnabledAsync();
 
@@ -1544,10 +1600,19 @@ else
     public void Dispose()
     {
         TicketService.TicketQueueAlteredEvent -= OnTicketQueueAltered;
+        // TicketService.TicketAddedToQueueEvent -= OnTicketAddedToQueue;
     }
 }
 
 <script>
+    
+    window.playNotificationSound = function () {
+        var audio = new Audio('/audio/notification.wav');
+        audio.play().catch(function (error) {
+            console.log("Audio playback failed:", error);
+        });
+    }
+
     window.printTicket = function (base64pdf) {
         return new Promise((resolve) => {
             var blob = b64toBlob(base64pdf, 'application/pdf');

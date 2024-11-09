@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Report ScriptLanguage="CSharp" UseFileCache="true" ReportInfo.Created="03/09/2023 10:19:50" ReportInfo.Modified="10/29/2024 16:24:45" ReportInfo.CreatorVersion="2024.1.2.0">
+<Report ScriptLanguage="CSharp" UseFileCache="true" ReportInfo.Created="03/09/2023 10:19:50" ReportInfo.Modified="11/07/2024 13:42:59" ReportInfo.CreatorVersion="2024.1.2.0">
   <ScriptText>using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -40,14 +40,16 @@ namespace FastReport
     <Style Name="EvenRows" Font="Arial, 10pt"/>
   </Styles>
   <Dictionary>
-    <PostgresDataConnection Name="Connection" ConnectionString="rijcmlqwOD/bEsQFbrXT9H9u0hdYcsAxnorcvsd0DOMXmQRVk1Elr+Ob90VuGMozAgUeOsdnU1cm07i7BED1iN532HWz9a/wPPmfaMR3hfgAX3Zr9t4UQwuoY7UJXG9uNt6TE3We4+2s6IfyQNrrK3PACoR7iBn1w4H0L7KOQAenKyld/SvRFSnuw7nLU40g5QwQ5pPwZ1TbPcEv0gDCi2wVAr6DB/5i+D68ukV0W7+InBQ1yg=">
-      <TableDataSource Name="Table1" Alias="WaitingTime" DataType="System.Int32" Enabled="true" SelectCommand="SELECT &#13;&#10;    s.&quot;Name&quot; as &quot;ServiceName&quot;,&#13;&#10;    COUNT(t.&quot;Id&quot;) as &quot;TotalTickets&quot;,&#13;&#10;    ROUND(AVG(EXTRACT(EPOCH FROM (t.&quot;ShowUpTime&quot; - t.&quot;ServicePointAssignmentTime&quot;))/60), 0) as &quot;AverageWaitMinutes&quot;&#13;&#10;FROM &#13;&#10;    &quot;Service&quot; s&#13;&#10;    LEFT JOIN &quot;ServedTicket&quot; t ON s.&quot;Id&quot; = t.&quot;ServiceId&quot;&#13;&#10;WHERE &#13;&#10;    t.&quot;PrintTime&quot;::timestamptz AT TIME ZONE @tz &gt;= to_timestamp(@datefrom, 'YYYY-MM-dd')&#13;&#10;    AND t.&quot;PrintTime&quot;::timestamptz AT TIME ZONE @tz &lt; to_timestamp(@dateto, 'YYYY-MM-dd')&#13;&#10;GROUP BY &#13;&#10;    s.&quot;Name&quot;&#13;&#10;ORDER BY &#13;&#10;    &quot;AverageWaitMinutes&quot; DESC;">
+    <PostgresDataConnection Name="Connection" ConnectionString="rijcmlqwOD/bEsQFbrXT9H9u0hdYcsAxnorcvsd0DOMXmQRVk1Elr+Ob90VuGMozAgUeOsdnU1cm07i7BED1iN532HWz9a/wPPmfaMR3hfgAX3Zr9t4UQwuoY7UJXG9uNt6TE3We4+2s6IfyQNrrK3PACoR7iBn1w4H0L7KOQAenKyld/TEcEzJ+eRRproGMxlcdZ3xr9Yn7FHGmvl6tQOTiF4poNxYtmRKey3bJUm2Lw3VXdk=">
+      <TableDataSource Name="Table1" Alias="WaitingTime" DataType="System.Int32" Enabled="true" SelectCommand="WITH CombinedTickets AS (&#13;&#10;    -- Active tickets from QueuedTickets&#13;&#10;    SELECT &#13;&#10;        &quot;ServiceName&quot;,&#13;&#10;        &quot;ServicePointAssignmentTime&quot;,&#13;&#10;        -- For active tickets, use current timestamp - assignment time&#13;&#10;        EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - &quot;ServicePointAssignmentTime&quot;))/60 as &quot;WaitMinutes&quot;&#13;&#10;    FROM &quot;QueuedTicket&quot;&#13;&#10;    WHERE (&quot;Status&quot; IN ('In-Queue', 'Called'))&#13;&#10;    AND &quot;ServicePointAssignmentTime&quot; IS NOT NULL&#13;&#10;    &#13;&#10;    UNION ALL&#13;&#10;    &#13;&#10;    -- Historical tickets from ServedTickets&#13;&#10;    SELECT &#13;&#10;        &quot;ServiceName&quot;,&#13;&#10;        &quot;ServicePointAssignmentTime&quot;,&#13;&#10;        -- For served tickets, use showup time - assignment time&#13;&#10;        EXTRACT(EPOCH FROM (&quot;ShowUpTime&quot; - &quot;ServicePointAssignmentTime&quot;))/60 as &quot;WaitMinutes&quot;&#13;&#10;    FROM &quot;ServedTicket&quot;&#13;&#10;    WHERE &quot;ServicePointAssignmentTime&quot; IS NOT NULL&#13;&#10;)&#13;&#10;SELECT &#13;&#10;    s.&quot;Name&quot; as &quot;ServiceName&quot;,&#13;&#10;    COUNT(ct.*) as &quot;TotalTickets&quot;,&#13;&#10;    ROUND(AVG(ct.&quot;WaitMinutes&quot;), 2) as &quot;AverageWaitMinutes&quot;,&#13;&#10;    ROUND(MIN(ct.&quot;WaitMinutes&quot;), 2) as &quot;MinWaitMinutes&quot;,&#13;&#10;    ROUND(MAX(ct.&quot;WaitMinutes&quot;), 2) as &quot;MaxWaitMinutes&quot;&#13;&#10;FROM &quot;Service&quot; s&#13;&#10;LEFT JOIN CombinedTickets ct ON s.&quot;Name&quot; = ct.&quot;ServiceName&quot;&#13;&#10;WHERE ct.&quot;ServicePointAssignmentTime&quot;::date &gt;= @datefrom::date&#13;&#10;AND ct.&quot;ServicePointAssignmentTime&quot;::date &lt;= @dateto::date&#13;&#10;GROUP BY s.&quot;Name&quot;&#13;&#10;ORDER BY &quot;AverageWaitMinutes&quot; DESC NULLS LAST;&#13;&#10;">
         <Column Name="TotalTickets" DataType="System.Int64"/>
         <Column Name="ServiceName" DataType="System.String"/>
         <Column Name="AverageWaitMinutes" DataType="System.Decimal"/>
+        <Column Name="MinWaitMinutes" DataType="System.Decimal"/>
+        <Column Name="MaxWaitMinutes" DataType="System.Decimal"/>
         <CommandParameter Name="tz" DataType="22" Expression="[Tz]" DefaultValue="EAT"/>
-        <CommandParameter Name="datefrom" DataType="22" Expression="[DateFrom]" DefaultValue="2024-08-01"/>
-        <CommandParameter Name="dateto" DataType="22" Expression="[DateTo]" DefaultValue="2024-10-30"/>
+        <CommandParameter Name="datefrom" DataType="22" Expression="[DateFrom]" DefaultValue="2024-11-01"/>
+        <CommandParameter Name="dateto" DataType="22" Expression="[DateTo]" DefaultValue="2024-11-09"/>
       </TableDataSource>
     </PostgresDataConnection>
     <Parameter Name="Tz" DataType="System.String" AsString=""/>
@@ -78,12 +80,16 @@ namespace FastReport
       <TextObject Name="Text56" Left="500.85" Top="122.85" Width="122.85" Height="18.9" Text="Report DateTime:" Font="Arial, 10pt, style=Bold"/>
     </ReportTitleBand>
     <PageHeaderBand Name="PageHeader1" Top="153.87" Width="1047.06" Height="18.9">
-      <TextObject Name="Text11" Left="9.45" Width="207.9" Height="18.9" Text="Service Name" Font="Times New Roman, 12pt, style=Bold"/>
-      <TextObject Name="Text38" Left="396.9" Width="236.25" Height="18.9" Text="Average Waiting Time" Font="Arial, 10pt, style=Bold"/>
+      <TextObject Name="Text11" Left="66.15" Width="207.9" Height="18.9" Text="Service Name" Font="Times New Roman, 12pt, style=Bold"/>
+      <TextObject Name="Text38" Left="302.4" Width="236.25" Height="18.9" Text="Average Waiting Time" Font="Arial, 10pt, style=Bold"/>
+      <TextObject Name="Text95" Left="576.45" Width="236.25" Height="18.9" Text="Minimum Waiting Time" Font="Arial, 10pt, style=Bold"/>
+      <TextObject Name="Text97" Left="803.25" Width="236.25" Height="18.9" Text="Maximum Waiting Time" Font="Arial, 10pt, style=Bold"/>
     </PageHeaderBand>
     <DataBand Name="Data1" Top="175.43" Width="1047.06" Height="21.56" Fill.Color="112, 173, 216, 230" EvenStyle="EvenRows" DataSource="Table1">
-      <TextObject Name="Text13" Left="9.45" Width="207.9" Height="18.9" Text="[WaitingTime.ServiceName]" Font="Arial, 10pt"/>
-      <TextObject Name="Text39" Left="396.9" Width="236.25" Height="18.9" Text="[WaitingTime.AverageWaitMinutes] Minutes" Font="Arial, 10pt"/>
+      <TextObject Name="Text13" Left="66.15" Width="207.9" Height="18.9" Text="[WaitingTime.ServiceName]" Font="Arial, 10pt"/>
+      <TextObject Name="Text39" Left="302.4" Width="236.25" Height="18.9" Text="[WaitingTime.AverageWaitMinutes] Minutes" Font="Arial, 10pt"/>
+      <TextObject Name="Text96" Left="576.45" Top="2.66" Width="236.25" Height="18.9" Text="[WaitingTime.MinWaitMinutes] Minutes" Font="Arial, 10pt"/>
+      <TextObject Name="Text98" Left="803.25" Top="2.66" Width="236.25" Height="18.9" Text="[WaitingTime.MaxWaitMinutes]Minutes" Font="Arial, 10pt"/>
     </DataBand>
     <PageFooterBand Name="PageFooter1" Top="199.66" Width="1047.06" Height="28.35">
       <TextObject Name="Text9" Left="614.25" Top="9.45" Width="94.5" Height="18.9" Text="[Page]" Font="Arial, 10pt"/>

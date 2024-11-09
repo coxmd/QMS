@@ -14,9 +14,8 @@ namespace QueueManagementSystem.MVC.Models.Users
         public string? Username { get; set; }
         [Required]
         public string? Password { get; set; }
-        [Required]
-        public int Role { get; set; }
-
         public bool Active { get; set; } = true;
+        // Add navigation property for roles
+        public virtual ICollection<UserRolesModel> UserRoles { get; set; } = new List<UserRolesModel>();
     }
 }

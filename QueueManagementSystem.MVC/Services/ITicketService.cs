@@ -12,6 +12,7 @@ namespace QueueManagementSystem.MVC.Services
         Task TransferTicket(int ticketId, string newServiceName);
 
         Task MarkTicketAsEmergencyAsync(int ticketId);
+        Task UnmarkTicketAsEmergencyAsync(int ticketId);
         Task RedistributeTicketsAsync(string serviceName);
         Task<Ticket?> GetTicketFromQueueAsync(string serviceName, string calledServicePointName);
         Task UpdateTicketNoShowStatusAsync(int ticketId, bool wasNoShow, DateTime? noShowTime);
@@ -52,6 +53,7 @@ namespace QueueManagementSystem.MVC.Services
 
         // Declare the event.
         public event EventHandler TicketQueueAlteredEvent;
+        public event EventHandler TicketAddedToQueueEvent;
 
         public event EventHandler<(string, string)> TicketCalledFromQueueEvent;
 

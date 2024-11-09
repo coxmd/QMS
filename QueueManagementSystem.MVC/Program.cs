@@ -7,6 +7,7 @@ using QueueManagementSystem.MVC.Components;
 using Serilog.Events;
 using Serilog;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using QueueManagementSystem.MVC.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +27,6 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog(); // Use Serilog for logging
 
-builder.Services.AddSignalR();
 // Add services to the container.
 builder.Services.AddHttpClient();
 builder.Services.AddControllersWithViews();
@@ -61,6 +61,7 @@ builder.Services.AddAuthentication("MyCookieScheme")
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ITicketService, TicketService>();
 builder.Services.AddSingleton<IReportService, ReportService>();
+builder.Services.AddSingleton<FingerprintState>();
 builder.Services.AddScoped<IAuthService, AuthService>(); ;
 builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
@@ -104,7 +105,8 @@ PrivilegeSeeder.SeedPrivileges(app);
 //    QueueManagementSystemContextSeeder.SeedServiceProviders(context);
 //    QueueManagementSystemContextSeeder.ResetQueue(context);
 //}
-app.MapHub<FingerprintHub>("/fingerprintHub");
+
+app.UseMiddleware<BaseUrlMiddleware>();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 

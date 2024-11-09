@@ -4,6 +4,7 @@ using FastReport.Web;
 using FastReport.Utils;
 using FastReport.Data;
 using System.Drawing;
+using Microsoft.AspNetCore.Http;
 
 namespace QueueManagementSystem.MVC.Services
 {
@@ -11,7 +12,6 @@ namespace QueueManagementSystem.MVC.Services
     {
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IConfiguration _configuration;
-        
 
         public ReportService(IWebHostEnvironment hostingEnvironment, IConfiguration configuration)
         {
@@ -22,17 +22,18 @@ namespace QueueManagementSystem.MVC.Services
         }
         public Report GenerateTicketReport(Ticket ticket)
         {
-            string url = $"http://192.168.0.112:8090/Queue/TicketTrackingPage/{ticket.TicketNumber}" ;
-            //TODO: catch exceptions for null or invalid tickets
+            string url = _configuration.GetSection("QMS")["CallbackUrl"];
+
             Report report = new Report();
             string reportPath = Path.Combine(_hostingEnvironment.WebRootPath, "reports", "Ticket.frx");
+            Console.WriteLine(reportPath);
             report.Load(reportPath);
 
            
             report.SetParameterValue("TicketNo", ticket.TicketNumber);
             report.SetParameterValue("serviceID", ticket.ServiceName);
             report.SetParameterValue("printTime", ticket.PrintTime);
-            report.SetParameterValue("URL", url);
+            report.SetParameterValue("URL", $"{url}/Queue/TicketTrackingPage/{ticket.TicketNumber}");
 
             report.Prepare();
 

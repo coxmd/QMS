@@ -1,0 +1,255 @@
+﻿.clickable-card {
+    cursor: pointer;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s ease;
+}
+
+    .clickable-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        transform: scale(1.04);
+    }
+
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.row {
+    overflow: hidden;
+}
+
+.qr-code {
+    z-index: 10;
+    margin-top: 2px;
+}
+
+.fingerprint-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    position: relative;
+}
+
+.fingerprint-section {
+    text-align: center;
+    position: relative;
+}
+
+.fingerprint-animation {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.fingerprint-icon {
+    font-size: 48px;
+    color: #164799;
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+    .fingerprint-icon.success {
+        color: #28a745;
+    }
+
+    .fingerprint-icon.error {
+        color: #dc3545;
+    }
+
+.fingerprint-ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px solid #164799;
+    opacity: 0;
+}
+
+.scanning .fingerprint-ripple {
+    animation: ripple 1.5s infinite;
+}
+
+.processing .fingerprint-icon {
+    animation: pulse 1s infinite;
+}
+
+.status-message {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+    .status-message.error {
+        color: #dc3545;
+    }
+
+.success-animation {
+    margin-top: 1rem;
+}
+
+.checkmark {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    margin: 0 auto;
+}
+
+.checkmark-circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid #28a745;
+    animation: circle-fill 0.4s ease-in-out;
+}
+
+.checkmark-stem {
+    position: absolute;
+    width: 3px;
+    height: 25px;
+    background-color: #28a745;
+    left: 25px;
+    top: 10px;
+    transform: rotate(45deg);
+    animation: stem-draw 0.4s ease-in-out 0.4s forwards;
+    opacity: 0;
+}
+
+.checkmark-kick {
+    position: absolute;
+    width: 12px;
+    height: 3px;
+    background-color: #28a745;
+    left: 16px;
+    top: 30px;
+    transform: rotate(-45deg);
+    animation: kick-draw 0.4s ease-in-out 0.4s forwards;
+    opacity: 0;
+}
+
+.invalid-feedback {
+    display: block;
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-control.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+@keyframes ripple {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes circle-fill {
+    0% {
+        transform: scale(0);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes stem-draw {
+    0% {
+        height: 0;
+        opacity: 1;
+    }
+
+    100% {
+        height: 25px;
+        opacity: 1;
+    }
+}
+
+@keyframes kick-draw {
+    0% {
+        width: 0;
+        opacity: 1;
+    }
+
+    100% {
+        width: 12px;
+        opacity: 1;
+    }
+}
+
+.authentication-retry {
+    text-align: center;
+    padding: 20px;
+    margin-top: 15px;
+}
+
+.retry-button {
+    margin: 10px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+    .retry-button.primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .retry-button.secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .retry-button:hover {
+        opacity: 0.9;
+    }
+
+.attempt-counter {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+}

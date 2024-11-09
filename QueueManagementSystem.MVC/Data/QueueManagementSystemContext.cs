@@ -41,6 +41,7 @@ namespace QueueManagementSystem.MVC.Data
         public DbSet<CompanyInformation> CompanyInformation { get; set; }
         public DbSet<ServiceProviderAssignment> ServiceProviderAssignments { get; set; }
 
+        public DbSet<UserRolesModel> UserRoles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -96,6 +97,22 @@ namespace QueueManagementSystem.MVC.Data
                 .WithMany()
                 .HasForeignKey(t => t.BiometricsId)
                 .OnDelete(DeleteBehavior.Restrict); // Optional, use Cascade or Restrict as needed
+
+            // Add configuration for UserRoles
+            builder.Entity<UserRolesModel>()
+                .HasKey(ur => new { ur.UserId, ur.RoleId });
+
+            builder.Entity<UserRolesModel>()
+                .HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<UserRolesModel>()
+                .HasOne(ur => ur.Role)
+                .WithMany()
+                .HasForeignKey(ur => ur.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.ApplyConfiguration(new TicketEntityTypeConfiguration());
             builder.ApplyConfiguration(new ServiceEntityTypeConfiguration());

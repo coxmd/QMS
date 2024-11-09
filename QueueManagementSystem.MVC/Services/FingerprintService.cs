@@ -64,6 +64,7 @@ namespace QueueManagementSystem.MVC.Services
                     //}
 
                     mDBHandle = zkfp2.DBInit();
+                    _logger.LogInformation($"Handle Value After Initialization: {mDBHandle}");
                     if (mDBHandle == IntPtr.Zero)
                     {
                         _logger.LogError("Failed to initialize fingerprint database");
@@ -142,7 +143,7 @@ namespace QueueManagementSystem.MVC.Services
             }).ConfigureAwait(false);
         }
 
-        public async Task<FingerprintResult> AuthenticateAsync()
+        public async Task<AuthenticationResult> AuthenticateAsync()
         {
             return await Task.Run(() =>
             {
@@ -160,7 +161,7 @@ namespace QueueManagementSystem.MVC.Services
                     var enrollResult = EnrollAsync().Result;
                     if (!enrollResult.IsAuthenticated)
                     {
-                        return new FingerprintResult { IsAuthenticated = false, Message = enrollResult.Message };
+                        return new AuthenticationResult { IsAuthenticated = false, Message = enrollResult.Message };
                     }
                     fullRecord = context.Biodata.FirstOrDefault(b => b.IdNumber == "30321983");
                     if (fullRecord != null)
@@ -169,7 +170,7 @@ namespace QueueManagementSystem.MVC.Services
                     }
                     else
                     {
-                        return new FingerprintResult { IsAuthenticated = false, Message = "Enrollment failed" };
+                        return new AuthenticationResult { IsAuthenticated = false, Message = "Enrollment failed" };
                     }
                 }
 
@@ -181,7 +182,7 @@ namespace QueueManagementSystem.MVC.Services
                         _logger.LogInformation($"Match finger succeeded, score={ret}!");
 
                         //Array.Clear(CapTmp, 0, CapTmp.Length); // Clear buffer for next capture
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = true,
                             Message = $"Match finger succeeded, score={ret}!",
@@ -192,7 +193,7 @@ namespace QueueManagementSystem.MVC.Services
                     {
                         _logger.LogError($"Match finger failed, ret={ret}");
                         //Array.Clear(CapTmp, 0, CapTmp.Length); // Clear buffer for next capture
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = false,
                             Message = $"Match finger failed, ret={ret}"
@@ -201,7 +202,7 @@ namespace QueueManagementSystem.MVC.Services
                 }
                 else
                 {
-                    return new FingerprintResult
+                    return new AuthenticationResult
                     {
                         IsAuthenticated = false,
                         Message = "Device Not Ready"
@@ -209,7 +210,7 @@ namespace QueueManagementSystem.MVC.Services
                 }
             }).ConfigureAwait(false);
         }
-        public async Task<FingerprintResult> SearchIdnoAsync(Models.CustomerInfo customer)
+        public async Task<AuthenticationResult> SearchIdnoAsync(Models.CustomerInfo customer)
         {
             return await Task.Run(() =>
             {
@@ -233,7 +234,7 @@ namespace QueueManagementSystem.MVC.Services
                             {
                                 _logger.LogInformation($"Fingerprint match succeeded, score={ret}!");
 
-                                return new FingerprintResult
+                                return new AuthenticationResult
                                 {
                                     IsAuthenticated = true,
                                     Message = $"Fingerprint match succeeded, score={ret}!",
@@ -244,7 +245,7 @@ namespace QueueManagementSystem.MVC.Services
                             {
                                 _logger.LogError($"Fingerprint match failed, ret={ret}");
                                 attempts--;
-                                return new FingerprintResult
+                                return new AuthenticationResult
                                 {
                                     IsAuthenticated = false,
 
@@ -255,7 +256,7 @@ namespace QueueManagementSystem.MVC.Services
                         }
 
                         // If no successful match after attempts
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = true,
                             Message = "Fingerprint match failed after 3 attempts."
@@ -273,7 +274,7 @@ namespace QueueManagementSystem.MVC.Services
                         context.Add(biodata);
                         context.SaveChanges();
                         _logger.LogInformation("Enroll success");
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = true,
                             Message = "Customer not found.Fingerprint regsitered Successfully."
@@ -283,7 +284,7 @@ namespace QueueManagementSystem.MVC.Services
                 else
                 {
                     // Device not ready or capture failed
-                    return new FingerprintResult
+                    return new AuthenticationResult
                     {
                         IsAuthenticated = false,
                         Message = "Device not ready"
@@ -293,7 +294,7 @@ namespace QueueManagementSystem.MVC.Services
             }).ConfigureAwait(false);
         }
 
-        public async Task<FingerprintResult> EnrollAsync()
+        public async Task<AuthenticationResult> EnrollAsync()
         {
             return await Task.Run(() =>
             {
@@ -323,7 +324,7 @@ namespace QueueManagementSystem.MVC.Services
                                 context.Add(biodata);
                                 context.SaveChanges();
                                 _logger.LogInformation("Enroll success");
-                                return new FingerprintResult
+                                return new AuthenticationResult
                                 {
                                     IsAuthenticated = true,
                                     Message = "Finger enrollment was successful"
@@ -332,7 +333,7 @@ namespace QueueManagementSystem.MVC.Services
                         }
 
                         _logger.LogError($"Enroll failed, error code={ret}");
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = false,
                             Message = $"Enroll failed, error code={ret}"
@@ -341,7 +342,7 @@ namespace QueueManagementSystem.MVC.Services
                     else
                     {
                         _logger.LogInformation($"You need to press the fingerprint {REGISTER_FINGER_COUNT - RegisterCount} more time(s)");
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = false,
                             Message = $"You need to press the fingerprint {REGISTER_FINGER_COUNT - RegisterCount} more time(s)"
@@ -349,7 +350,7 @@ namespace QueueManagementSystem.MVC.Services
                     }
                 }
 
-                return new FingerprintResult
+                return new AuthenticationResult
                 {
                     IsAuthenticated = false,
                     Message = "Device not ready, lift your finger and press again"
@@ -395,14 +396,14 @@ namespace QueueManagementSystem.MVC.Services
             _logger.LogInformation("Fingerprint service disposed");
         }
 
-        public async Task<FingerprintResult> ContinuousScanAsync(Models.CustomerInfo customer)
+        public async Task<AuthenticationResult> ContinuousScanAsync(Models.CustomerInfo customer)
         {
             return await Task.Run(() =>
             {
                 if (!CaptureFingerprint())
                 {
                     _logger.LogWarning("Failed to acquire fingerprint");
-                    return new FingerprintResult
+                    return new AuthenticationResult
                     {
                         IsAuthenticated = false,
                         Message = "No fingerprint detected"
@@ -418,7 +419,7 @@ namespace QueueManagementSystem.MVC.Services
                     if (ret > 0)
                     {
                         _logger.LogInformation($"Fingerprint match succeeded, score={ret}!");
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = true,
                             Message = $"Fingerprint match succeeded, score={ret}!"
@@ -427,7 +428,7 @@ namespace QueueManagementSystem.MVC.Services
                     else
                     {
                         _logger.LogWarning($"Fingerprint match failed, score={ret}");
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = false,
                             Message = "Fingerprint match failed"
@@ -445,7 +446,7 @@ namespace QueueManagementSystem.MVC.Services
                     context.Add(biodata);
                     context.SaveChanges();
                     _logger.LogInformation("Fingerprint registered successfully");
-                    return new FingerprintResult
+                    return new AuthenticationResult
                     {
                         IsAuthenticated = true,
                         Message = "Fingerprint registered successfully."
@@ -454,71 +455,91 @@ namespace QueueManagementSystem.MVC.Services
             });
         }
 
-        public async Task<FingerprintResult> MatchFingerPrintAsync(Models.CustomerInfo customer)
+        public async Task<AuthenticationResult> MatchFingerPrintAsync(Models.CustomerInfo customer)
         {
-            return await Task.Run(() =>
+            try
             {
-
                 using var context = _dbFactory.CreateDbContext();
-                // Fetch the list of fingerprints from the database
-                var fingerprints = context.Biodata.Where(b => b.FingerPrintData != null).ToList();
-                var fingerPrintCount = fingerprints.Count();
-                Biometrics bio = new Biometrics();
 
+                _logger.LogInformation("Starting fingerprint matching:" +
+                $"\n- Input template size: {customer.FingerPrintData.Length} bytes" +
+                $"\n- First 10 bytes: {BitConverter.ToString(customer.FingerPrintData.Take(10).ToArray())}");
+
+                // Fetch the list of fingerprints from the database
+                var fingerprints = await context.Biodata
+                    .Where(b => b.FingerPrintData != null)
+                    .ToListAsync();  // Use async version
 
                 foreach (var fingerprint in fingerprints)
                 {
-                    // Check for a matching customer info based on fingerprint data
+                    _logger.LogInformation($"Comparing with database fingerprint:" +
+                    $"\n- DB template size: {fingerprint.FingerPrintData.Length} bytes" +
+                    $"\n- First 10 bytes: {BitConverter.ToString(fingerprint.FingerPrintData.Take(10).ToArray())}");
+                    mDBHandle = zkfp2.DBInit();
+                    _logger.LogInformation($"Handle Value While Matching: {mDBHandle}");
+
                     int ret = zkfp2.DBMatch(mDBHandle, customer.FingerPrintData, fingerprint.FingerPrintData);
+                    _logger.LogInformation($"Match score={ret}!" +
+                    $"\n- Customer template size: {customer.FingerPrintData.Length}" +
+                    $"\n- DB template size: {fingerprint.FingerPrintData.Length}");
                     _logger.LogInformation($"score={ret}!");
+
                     if (ret > 0)
                     {
                         _logger.LogInformation($"Fingerprint match succeeded, score={ret}!");
-                        return new FingerprintResult
+                        return new AuthenticationResult
                         {
                             IsAuthenticated = true,
-                            CustomerIdno = fingerprint.IdNumber!,
+                            CustomerId = fingerprint.IdNumber!,
                             Message = $"Fingerprint match succeeded, score={ret}!"
                         };
                     }
-                    ComparisonData = ret;
-
-
-
                 }
 
-                if (ComparisonData < 1)
+                // If no match found, save the new fingerprint
+                if (fingerprints.Count == 0 || !fingerprints.Any(f => zkfp2.DBMatch(mDBHandle, customer.FingerPrintData, f.FingerPrintData) > 0))
                 {
-                    bio.FingerPrintData = customer.FingerPrintData;
-                    bio.IdNumber = "0";
-                    context.Biodata.Add(bio);
-                    context.SaveChangesAsync();
-                }
-                
-               
+                    var bio = new Biometrics
+                    {
+                        FingerPrintData = customer.FingerPrintData,
+                        IdNumber = "0"
+                    };
 
-                return new FingerprintResult
+                    context.Biodata.Add(bio);
+                    await context.SaveChangesAsync();  // Use async version
+
+                    return new AuthenticationResult
+                    {
+                        IsAuthenticated = false,
+                        Message = "No Registered Fingerprint data"
+                    };
+                }
+
+                return new AuthenticationResult
                 {
                     IsAuthenticated = false,
-                    
-                    Message = $"No Registered Fingerprint data"
+                    Message = "Fingerprint verification failed"
                 };
-
-            });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in fingerprint matching");
+                throw;
+            }
         }
 
     }
 
-    public class FingerprintResult
-    {
-        public bool IsAuthenticated { get; set; }
-        public string Message { get; set; }
-        public bool IsSuccess { get; set; }
-        public string CustomerName { get; set; }
-        public string CustomerIdno { get; set; }
-        public string CustomerPhoneNumber { get; set; }
-        public string CustomerEmail { get; set; }
-        public int FingerPrintCount { get; set; }
-        public byte[]? FingerPrintData { get; set; }
-    }
+    //public class FingerprintResult
+    //{
+    //    public bool IsAuthenticated { get; set; }
+    //    public string Message { get; set; }
+    //    public bool IsSuccess { get; set; }
+    //    public string CustomerName { get; set; }
+    //    public string CustomerIdno { get; set; }
+    //    public string CustomerPhoneNumber { get; set; }
+    //    public string CustomerEmail { get; set; }
+    //    public int FingerPrintCount { get; set; }
+    //    public byte[]? FingerPrintData { get; set; }
+    //}
 }

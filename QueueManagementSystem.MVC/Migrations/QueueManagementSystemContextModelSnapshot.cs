@@ -595,6 +595,21 @@ namespace QueueManagementSystem.MVC.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("QueueManagementSystem.MVC.Models.UserRolesModel", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("UserRoles");
+                });
+
             modelBuilder.Entity("QueueManagementSystem.MVC.Models.Users.SystemUsersModel", b =>
                 {
                     b.Property<int>("Id")
@@ -613,9 +628,6 @@ namespace QueueManagementSystem.MVC.Migrations
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Surname")
                         .IsRequired()
@@ -730,6 +742,25 @@ namespace QueueManagementSystem.MVC.Migrations
                     b.Navigation("ServicePoint");
                 });
 
+            modelBuilder.Entity("QueueManagementSystem.MVC.Models.UserRolesModel", b =>
+                {
+                    b.HasOne("QueueManagementSystem.MVC.Models.UserRole", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QueueManagementSystem.MVC.Models.Users.SystemUsersModel", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("QueueManagementSystem.MVC.Models.Privilege", b =>
                 {
                     b.Navigation("RolePrivileges");
@@ -748,6 +779,11 @@ namespace QueueManagementSystem.MVC.Migrations
             modelBuilder.Entity("QueueManagementSystem.MVC.Models.UserRole", b =>
                 {
                     b.Navigation("RolePrivileges");
+                });
+
+            modelBuilder.Entity("QueueManagementSystem.MVC.Models.Users.SystemUsersModel", b =>
+                {
+                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

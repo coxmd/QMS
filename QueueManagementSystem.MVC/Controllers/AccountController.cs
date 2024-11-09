@@ -96,8 +96,11 @@ namespace Queue_Management_System.Controllers
                 return View();
             }
             using var context = _dbFactory.CreateDbContext();
-            var userName = context.SystemUsers.FirstOrDefault(s => s.Username == user.UserName);
-             if(userName == null)
+            var userName = await context.SystemUsers
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(s => s.Username == user.UserName);
+            if (userName == null)
             {
                 // Handle user not found case
                 ModelState.AddModelError(string.Empty, "Invalid Username ");
@@ -115,24 +118,39 @@ namespace Queue_Management_System.Controllers
                 ModelState.AddModelError(string.Empty, "User not active");
                 return View();
             }
-            var Rolename = context.Roles.FirstOrDefault(s => s.Id == serviceProvider.Role);
+            // Get all user roles
+            var userRoles = userName.UserRoles.Select(ur => ur.Role).ToList();
 
-            //string? role = serviceProvider.IsAdmin ? "Admin" : "";
+            if (!userRoles.Any())
+            {
+                ModelState.AddModelError(string.Empty, "User has no assigned roles");
+                return View();
+            }
 
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, serviceProvider.Id.ToString()),
                 new Claim(ClaimTypes.Name, serviceProvider.Surname),
-                new Claim(ClaimTypes.Role, Rolename.Name)
             };
+
+            // Add all roles as claims
+            foreach (var role in userRoles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role.Name));
+            }
 
             // Add privileges as claims
 
-            var privileges = context.RolePrivileges.Where(p => p.RoleId == serviceProvider.Role).Select(p => p.Privilege).ToList();
-            foreach (var privilege in privileges)                 
+            // Add privileges for all roles
+            var privileges = await context.RolePrivileges
+                .Where(p => userRoles.Select(r => r.Id).Contains(p.RoleId))
+                .Select(p => p.Privilege)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var privilege in privileges)
             {
                 claims.Add(new Claim("Privilege", privilege.Name));
-                
             }
 
             var claimsIdentity = new ClaimsIdentity(claims, "MyCookieScheme");
@@ -145,12 +163,17 @@ namespace Queue_Management_System.Controllers
 
             await HttpContext.SignInAsync("MyCookieScheme", new ClaimsPrincipal(claimsIdentity), authProperties);
 
-            // Redirect based on role
-            return Rolename.Name switch
+            // Redirect based on highest priority role
+            // You might want to define a priority order for roles
+            var primaryRole = userRoles.FirstOrDefault(r => r.Name == "Admin") ??
+                            userRoles.FirstOrDefault(r => r.Name == "Service Provider") ??
+                            userRoles.First(); // fallback to first role
+
+            return primaryRole.Name switch
             {
                 "Admin" => RedirectToAction("Dashboard", "Admin"),
                 "Service Provider" => RedirectToAction("ServicePoint", "Queue"),
-                _ => RedirectToAction("ServicePoint", "Queue") // Default to ServicePoint if role is unknown
+                _ => RedirectToAction("ServicePoint", "Queue")
             };
 
         }

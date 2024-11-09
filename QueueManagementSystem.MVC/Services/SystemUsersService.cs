@@ -37,18 +37,38 @@ namespace QueueManagementSystem.MVC.Services
         }
         public async Task<bool> EditUser(SystemUsersModel usersModel)
         {
+            using var context = _db.CreateDbContext();
+            using var transaction = await context.Database.BeginTransactionAsync();
             try
             {
-                using var context = _db.CreateDbContext();
-                context.SystemUsers.Update(usersModel);
+                var existingUser = await context.SystemUsers
+                    .Include(u => u.UserRoles)
+                    .FirstOrDefaultAsync(u => u.Id == usersModel.Id);
+
+                if (existingUser == null)
+                    return false;
+
+                // Remove existing roles
+                context.UserRoles.RemoveRange(existingUser.UserRoles);
+
+                // Update user properties
+                existingUser.Surname = usersModel.Surname;
+                existingUser.OtherNames = usersModel.OtherNames;
+                existingUser.Username = usersModel.Username;
+                existingUser.Password = usersModel.Password;
+                existingUser.Active = usersModel.Active;
+
+                // Add new roles
+                existingUser.UserRoles = usersModel.UserRoles;
+
                 await context.SaveChangesAsync();
+                await transaction.CommitAsync();
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine(ex.ToString());
-                return false;
-
+                await transaction.RollbackAsync();
+                throw;
             }
         }
         public async Task<bool> ResetPassword(SystemUsersModel usersModel)
@@ -70,7 +90,10 @@ namespace QueueManagementSystem.MVC.Services
         public async Task<List<SystemUsersModel>> FetUsers()
         {
             using var context = _db.CreateDbContext();
-            return await context.SystemUsers.ToListAsync();
+            return await context.SystemUsers
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .ToListAsync();
         }
         public async Task<SystemUsersModel?> FetUserName(string userName)
         {

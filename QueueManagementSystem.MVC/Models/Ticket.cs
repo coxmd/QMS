@@ -11,7 +11,7 @@ namespace QueueManagementSystem.MVC.Models
         public string ServiceName {get; set;}
         public DateTime PrintTime {get; set;}
         public DateTime ServicePointAssignmentTime { get; set; }
-        public DateTime ShowUpTime { get; set; }
+        public DateTime ShowUpTime { get; set; } = DateTime.Now;
         public string Status {get; set;}
         public string? CustomerName { get; set; } = null;
         public string? CustomerPhoneNumber { get; set; } = null;

@@ -36,7 +36,7 @@ namespace Queue_Management_System.Controllers
         }
 
         [HasPrivilege(PrivilegeConstants.AccessServicePoint)]
-        [Authorize, HttpGet]
+        [HttpGet]
         public IActionResult ServicePoint()
         {
             ViewData["BreadcrumbTitle"] = "Service Point";
